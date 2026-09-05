@@ -7,3 +7,5 @@ system-health.log
 .terraform/
 *.tfstate
 *.tfstate.*
+*.tfvars
+!terraform.tfvars.example
