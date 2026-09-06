@@ -9,3 +9,6 @@ system-health.log
 *.tfstate.*
 *.tfvars
 !terraform.tfvars.example
+
+# Ansible
+ansible/inventory.ini

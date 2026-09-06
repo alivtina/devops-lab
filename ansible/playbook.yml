@@ -1,0 +1,62 @@
+---
+- name: Configure web server
+  hosts: webservers
+  become: true
+
+  tasks:
+    - name: Install nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+        update_cache: true
+
+    - name: Create application directory
+      ansible.builtin.file:
+        path: /var/www/python-app
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    - name: Create index.html
+      ansible.builtin.copy:
+        content: |
+          Hello from my Python application!
+        dest: /var/www/python-app/index.html
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+
+    - name: Create systemd service
+      ansible.builtin.copy:
+        content: |
+          [Unit]
+          Description=Python HTTP Server for DevOps lab
+
+          [Service]
+          User={{ app_user }}
+          WorkingDirectory=/var/www/python-app
+          ExecStart=/usr/bin/python3 -m http.server 8000
+        dest: /etc/systemd/system/python-http.service
+        owner: root
+        group: root
+        mode: '0644'
+      notify:
+        - Reload systemd
+
+    - name: Ensure Python HTTP service is running
+      ansible.builtin.systemd_service:
+        name: python-http
+        state: started
+        enabled: true
+
+    - name: Ensure nginx is running
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: true
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd_service:
+        daemon_reload: true

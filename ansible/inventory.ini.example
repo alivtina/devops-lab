@@ -1,0 +1,2 @@
+[webservers]
+ubuntu-devops ansible_host=YOUR_SERVER_IP ansible_user=YOUR_USERNAME app_user=YOUR_USERNAME
