@@ -1,36 +1,42 @@
-# Linux Server Lab
+# DevOps Lab
 
-Hands-on DevOps practice environment covering Linux administration, networking, Bash scripting, Python, Git/GitHub, Docker, CI/CD, and virtualization.
+Hands-on DevOps practice environment covering Linux administration, networking, Bash scripting, Python, Git/GitHub, Docker, CI/CD, Terraform, Ansible, and virtualization.
 
-The project is built and tested on an Ubuntu Server virtual machine running on a QEMU/KVM host with Arch Linux.
+The projects are built and tested using an Ubuntu Server virtual machine running on a QEMU/KVM environment with an Arch Linux host.
 
 ## Skills Demonstrated
 
-| Area            | Technologies / Skills                                                   |
-| --------------- | ----------------------------------------------------------------------- |
-| Linux           | Ubuntu Server, Arch Linux, CLI, package management, troubleshooting     |
-| Networking      | TCP/IP, ports, localhost, NAT, SSH, `tcpdump`                           |
-| Shell           | Bash scripting, ShellCheck, command-line automation                     |
-| Programming     | Python, pytest                                                          |
-| Version Control | Git, GitHub                                                             |
-| Containers      | Docker, Docker Compose, Dockerfiles, non-root containers, health checks |
-| CI/CD           | GitHub Actions, automated testing, Docker builds, artifacts, deployment |
-| Virtualization  | QEMU/KVM, libvirt, virt-manager, VirtualBox                             |
+| Area                     | Technologies / Skills                                                                                 |
+| ------------------------ | ----------------------------------------------------------------------------------------------------- |
+| Linux                    | Ubuntu Server, Arch Linux, CLI, package management, permissions, processes, services, troubleshooting |
+| Networking               | TCP/IP, IP addresses, ports, localhost, NAT, SSH, `curl`, `ss`, `tcpdump`                             |
+| Shell                    | Bash scripting, ShellCheck, command-line automation                                                   |
+| Programming              | Python, pytest                                                                                        |
+| Version Control          | Git, GitHub                                                                                           |
+| Containers               | Docker, Docker Compose, Dockerfiles, non-root containers, health checks                               |
+| CI/CD                    | GitHub Actions, automated testing, Docker builds, artifacts, deployment                               |
+| Infrastructure as Code   | Terraform, Docker provider, resources, variables, outputs, state                                      |
+| Configuration Management | Ansible, inventory, modules, privilege escalation, handlers, idempotency                              |
+| Virtualization           | QEMU/KVM, libvirt, virt-manager, VirtualBox                                                           |
 
 ## Repository Structure
 
 ```text
-linux-server-lab/
+devops-lab/
 ├── .github/
 │   └── workflows/
 │       └── ci.yml
+├── ansible/
+│   ├── README.md
+│   ├── ansible.cfg
+│   ├── inventory.ini.example
+│   └── playbook.yml
 ├── docker/
 │   ├── app-demo/
 │   ├── compose-demo/
 │   ├── dockerfile-demo/
 │   ├── website/
 │   └── README.md
-├── docs/
 ├── python/
 │   └── system-health/
 │       ├── Dockerfile
@@ -38,8 +44,12 @@ linux-server-lab/
 │       ├── requirements.txt
 │       └── system.py
 ├── scripts/
+├── terraform/
+│   ├── first-project/
+│   │   └── README.md
+│   └── web-infrastructure/
+│       └── README.md
 ├── tests/
-│   └── test_system_health.py
 ├── troubleshooting/
 ├── .dockerignore
 ├── .gitignore
@@ -54,12 +64,12 @@ Examples include:
 
 * inspecting system information
 * monitoring CPU, memory, and disk usage
-* working with processes and services
 * managing files and permissions
+* working with processes and services
 * package management
-* troubleshooting system issues
-* working with SSH
+* SSH configuration and troubleshooting
 * investigating network connections
+* diagnosing system problems
 
 ### System Information Script
 
@@ -75,7 +85,7 @@ Examples include:
 
 ## Networking
 
-Networking fundamentals were practiced using both the host system and virtual machines.
+Networking fundamentals were practiced using both the Arch Linux host and Ubuntu Server virtual machines.
 
 Topics include:
 
@@ -88,7 +98,7 @@ Topics include:
 * client/server communication
 * packet inspection with `tcpdump`
 
-The networking exercises focus on understanding what happens when applications communicate over a network rather than only memorizing networking terminology.
+The exercises focus on understanding the path of network traffic and using tools such as `ip`, `ss`, `curl`, and `tcpdump` to troubleshoot connectivity problems.
 
 ## Bash
 
@@ -98,6 +108,7 @@ The repository includes shell scripts for:
 
 * system information
 * health checks
+* command-line automation
 * automated checks used by CI
 
 Shell scripts are validated with ShellCheck in GitHub Actions.
@@ -116,24 +127,17 @@ The application collects:
 * disk usage
 * available disk space
 
-It supports both human-readable and JSON output.
-
-Example:
+It supports human-readable and JSON output:
 
 ```bash
 python system.py
-```
-
-JSON output:
-
-```bash
 python system.py --json
 ```
 
 The application also includes:
 
 * logging
-* usage threshold checks
+* resource usage threshold checks
 * automated tests with pytest
 * Docker containerization
 * non-root container execution
@@ -146,11 +150,6 @@ Python tests are located in:
 tests/test_system_health.py
 ```
 
-The tests verify application behavior such as:
-
-* resource usage status checks
-* CPU core detection
-
 Tests are executed locally with:
 
 ```bash
@@ -161,28 +160,34 @@ and automatically in GitHub Actions.
 
 ## Docker
 
-The repository contains several Docker exercises progressing from basic Dockerfiles to multi-container applications.
+The repository contains several Docker exercises progressing from basic containers to multi-container applications.
 
 ### Dockerfile Demo
 
-Basic Docker image building and container execution.
+Practice with:
+
+* Dockerfiles
+* image building
+* container execution
+* port mapping
+* container lifecycle
 
 ### Website
 
-A simple containerized website used to practice:
-
-* Dockerfiles
-* port mapping
-* container lifecycle
-* HTTP access
+A simple containerized website used to practice HTTP access and container networking.
 
 ### Compose Demo
 
-A multi-container setup used to practice Docker Compose and service communication.
+A multi-container application used to practice:
+
+* Docker Compose
+* service configuration
+* container networking
+* service communication
 
 ### Python System Health Container
 
-The Python system health application is packaged as a Docker image.
+The Python system-health application is packaged as a Docker image.
 
 The image:
 
@@ -198,13 +203,11 @@ docker build -t system-health:dev python/system-health
 docker run --rm system-health:dev
 ```
 
-The application runs as a non-root user inside the container.
-
 ### Container Health Checks
 
 The long-running HTTP application uses a Docker `HEALTHCHECK` to distinguish between a running container and a healthy application.
 
-The Python system-health CLI does not use a Docker health check because it is a short-lived command-line application: it performs its check and exits.
+The Python system-health CLI does not use a Docker health check because it is a short-lived command-line application that performs its check and exits.
 
 ## Git and GitHub
 
@@ -232,12 +235,12 @@ The CI pipeline currently performs:
 2. Bash tests
 3. Python dependency installation
 4. Python tests with pytest
-5. Build artifact creation
+5. build artifact creation
 6. Docker image build
 7. Docker container execution
-8. Application verification
-9. Deployment to an Ubuntu Server self-hosted runner
-10. Deployment verification
+8. application verification
+9. deployment to an Ubuntu Server self-hosted runner
+10. deployment verification
 
 ### Pipeline Overview
 
@@ -285,6 +288,124 @@ Deployment includes:
 
 The deployment environment is an Ubuntu Server VM running under QEMU/KVM.
 
+## Terraform
+
+The `terraform/` directory contains infrastructure-as-code projects using Terraform with the Docker provider.
+
+### First Project
+
+`terraform/first-project/` demonstrates the basic Terraform workflow:
+
+```text
+Terraform
+   │
+   ├── Provider
+   ├── Image
+   ├── Container
+   ├── Variable
+   └── Output
+```
+
+The project creates and manages an Nginx Docker container.
+
+It demonstrates:
+
+* providers
+* resources
+* variables
+* outputs
+* resource dependencies
+* Terraform state
+* `terraform init`
+* `terraform validate`
+* `terraform plan`
+* `terraform apply`
+* `terraform destroy`
+
+### Web Infrastructure
+
+`terraform/web-infrastructure/` extends the previous project into a small multi-container infrastructure.
+
+It creates:
+
+* a custom Docker network
+* an Nginx container
+* a Redis container
+* configurable container names and ports
+* Terraform outputs
+
+The Nginx and Redis containers communicate through the custom Docker network using Docker's internal DNS.
+
+The infrastructure was verified using container-level connectivity tests and Redis `PONG` responses.
+
+## Ansible
+
+The `ansible/` directory contains an Ansible project for automating Ubuntu Server configuration.
+
+The playbook:
+
+1. installs Nginx
+2. creates an application directory
+3. creates a Python HTTP application
+4. creates a systemd service
+5. reloads systemd when the service definition changes
+6. starts and enables the Python service
+7. starts and enables Nginx
+
+The resulting request path is:
+
+```text
+Client
+  │
+  ▼
+Ubuntu :80
+  │
+  ▼
+Nginx
+  │
+  ▼
+127.0.0.1:8000
+  │
+  ▼
+Python HTTP server
+```
+
+### Ansible Concepts Practiced
+
+* inventory configuration
+* SSH connectivity
+* privilege escalation
+* Ansible modules
+* `apt`
+* `file`
+* `copy`
+* `systemd_service`
+* handlers
+* variables
+* service management
+* idempotency
+
+The playbook was executed repeatedly to verify idempotent behavior. Once the desired state was reached, subsequent runs reported `changed=0`.
+
+### Troubleshooting
+
+During development, Nginx returned a `502 Bad Gateway`.
+
+The problem was investigated by:
+
+1. checking the Nginx service
+2. inspecting the Nginx configuration
+3. checking listening ports
+4. testing the upstream application directly
+5. inspecting the Nginx error log
+6. identifying that port `8000` had no listener
+7. starting the Python backend
+8. verifying the complete request path
+
+This exercise connected Linux administration, networking, Nginx, systemd, Python, and Ansible automation.
+
+More details are available in [`ansible/README.md`](ansible/README.md).
+
 ## Virtualization
 
 The lab environment uses:
@@ -295,7 +416,7 @@ The lab environment uses:
 * Ubuntu Server virtual machines
 * Arch Linux host
 
-Virtualization is used to create an isolated environment for Linux administration, networking, CI/CD, and deployment practice.
+Virtualization provides an isolated environment for Linux administration, networking, CI/CD, deployment, and automation practice.
 
 ## Troubleshooting
 
@@ -308,35 +429,41 @@ Examples include:
 * file permission problems
 * Python runtime issues
 * CI/CD troubleshooting
+* Nginx and backend connectivity problems
+* Ansible privilege escalation issues
 
-The goal is to document not only successful configurations but also how problems were investigated and resolved.
+The goal is to document not only successful configurations, but also how problems were investigated and resolved.
 
-## Current Focus
+## Current Progress
 
-The project is being developed progressively toward practical junior DevOps skills.
-
-Current areas include:
+Completed or actively practiced:
 
 * Linux administration
-* networking
+* networking fundamentals
 * Bash
 * Python
-* Docker
 * Git/GitHub
-* GitHub Actions
-* CI/CD
+* Docker
+* GitHub Actions and CI/CD
 * virtualization
+* Terraform fundamentals
+* Ansible fundamentals
 
-Planned areas include:
+### Next Focus
 
-* AWS
-* Infrastructure as Code with Terraform
+The next stages of the learning path are:
+
+* AWS and cloud fundamentals
 * Kubernetes
 * monitoring and logging
 * DevOps security
-* more realistic deployment projects
+* more realistic integrated DevOps projects
+* GitHub portfolio refinement
+* CV and job preparation
+* technical interview preparation
 
 ## Goal
 
 The long-term goal of this lab is to develop practical skills required for junior DevOps, Cloud, Platform, and related infrastructure roles while building a portfolio of reproducible hands-on projects.
 
+The projects are developed progressively, with an emphasis on understanding, troubleshooting, automation, and explaining how the technologies are used in real-world DevOps environments.
