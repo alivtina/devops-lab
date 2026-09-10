@@ -2,28 +2,39 @@
 
 ## Goal
 
-Practice the fundamentals of deploying and exposing a containerized application with Kubernetes using a local `kind` cluster.
+Practice Kubernetes fundamentals by deploying and exposing a containerized Nginx application on a local Kubernetes cluster created with `kind`.
+
+## Environment
+
+* Arch Linux host
+* Docker
+* kind
+* kubectl
+* Kubernetes cluster with a single control-plane node
 
 ## Architecture
 
 ```text
 Arch Linux host
-    │
-    │ NodePort :31757
-    ▼
+      │
+      │ HTTP :31757
+      ▼
 Kind Kubernetes node
-    │
-    ▼
-Service: nginx-deployment
-    │
-    ├── Pod: nginx
-    └── Pod: nginx
-```
-
-The Service selects Pods using the label:
-
-```text
-app=nginx-deployment
+      │
+      ▼
+NodePort Service
+nginx-deployment
+      │
+      │ selector: app=nginx-deployment
+      ▼
+┌─────────────────────────────┐
+│ Deployment: nginx-deployment│
+│                             │
+│  ┌─────────┐  ┌─────────┐  │
+│  │  Pod    │  │  Pod    │  │
+│  │  Nginx  │  │  Nginx  │  │
+│  └─────────┘  └─────────┘  │
+└─────────────────────────────┘
 ```
 
 ## Deployment
@@ -35,23 +46,66 @@ The application is managed by a Kubernetes Deployment with:
 * `nginx:1.29-alpine` image
 * Container port `80`
 
-The Deployment ensures that the desired number of Pods is maintained.
+The Deployment maintains the desired number of Pods and replaces Pods when the Pod template changes.
 
 ## Service
 
-A `NodePort` Service exposes the Nginx Pods.
+A `NodePort` Service exposes the Nginx application.
 
 * Service port: `80`
 * Target port: `80`
 * NodePort: dynamically assigned by Kubernetes
 
-The Service uses a label selector to route traffic only to the Pods belonging to the `nginx-deployment`.
+The Service uses the selector:
+
+```text
+app=nginx-deployment
+```
+
+This ensures that traffic is sent only to the Pods belonging to this Deployment.
+
+## ConfigMap
+
+A ConfigMap provides non-sensitive configuration to Kubernetes Pods.
+
+This lab uses `nginx-config` with:
+
+```text
+APP_ENV=development
+APP_MESSAGE=Hello from Kubernetes
+```
+
+The Deployment injects the ConfigMap values into the container as environment variables:
+
+```yaml
+envFrom:
+  - configMapRef:
+      name: nginx-config
+```
+
+The configuration was verified inside a running Pod:
+
+```bash
+kubectl exec <POD_NAME> -- env | grep APP_
+```
+
+Expected output:
+
+```text
+APP_ENV=development
+APP_MESSAGE=Hello from Kubernetes
+```
+
+ConfigMaps allow application configuration to be separated from the container image.
+
+Sensitive values such as passwords, API keys, and tokens should not be stored in a ConfigMap. Kubernetes Secrets or external secret-management systems should be used instead.
 
 ## What I Practiced
 
 * Created a local Kubernetes cluster with `kind`
-* Created a Deployment using YAML
-* Created a Service using YAML
+* Used `kubectl` to manage Kubernetes resources
+* Created a Deployment using declarative YAML
+* Created a NodePort Service using declarative YAML
 * Used labels and selectors to connect Services to Pods
 * Inspected Pod IP addresses and EndpointSlices
 * Tested Service connectivity from inside the cluster
@@ -59,7 +113,8 @@ The Service uses a label selector to route traffic only to the Pods belonging to
 * Scaled a Deployment from 2 to 3 replicas
 * Practiced Kubernetes desired-state reconciliation
 * Performed a rolling update from `nginx:alpine` to `nginx:1.29-alpine`
-* Verified the resulting Pods and deployment state
+* Injected configuration into Pods using a ConfigMap
+* Verified environment variables inside a running container
 
 ## Verification
 
@@ -87,6 +142,12 @@ Check Service endpoints:
 kubectl get endpointslices
 ```
 
+Check the ConfigMap:
+
+```bash
+kubectl describe configmap nginx-config
+```
+
 Test the Service from inside the cluster:
 
 ```bash
@@ -104,4 +165,10 @@ Check the current container image:
 ```bash
 kubectl get deployment nginx-deployment \
   -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+```
+
+Check ConfigMap environment variables:
+
+```bash
+kubectl exec <POD_NAME> -- env | grep APP_
 ```

@@ -22,3 +22,7 @@ spec:
           image: nginx:1.29-alpine
           ports:
             - containerPort: 80
+
+          envFrom:
+            - configMapRef:
+                name: nginx-config
