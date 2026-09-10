@@ -17,7 +17,7 @@ Practice Kubernetes fundamentals by deploying and exposing a containerized Nginx
 ```text
 Arch Linux host
       │
-      │ HTTP :31757
+      │ HTTP :<NODE_PORT>
       ▼
 Kind Kubernetes node
       │
@@ -98,7 +98,47 @@ APP_MESSAGE=Hello from Kubernetes
 
 ConfigMaps allow application configuration to be separated from the container image.
 
-Sensitive values such as passwords, API keys, and tokens should not be stored in a ConfigMap. Kubernetes Secrets or external secret-management systems should be used instead.
+## Secret
+
+A Kubernetes Secret is used for sensitive configuration such as passwords, API keys, and tokens.
+
+This lab uses a Secret named `app-secret` containing:
+
+```text
+DB_PASSWORD=super-secret-password
+```
+
+The Secret is injected into the Deployment as an environment variable:
+
+```yaml
+envFrom:
+  - configMapRef:
+      name: nginx-config
+  - secretRef:
+      name: app-secret
+```
+
+The Secret was verified inside a running Pod:
+
+```bash
+kubectl exec <POD_NAME> -- env | grep DB_PASSWORD
+```
+
+Expected output:
+
+```text
+DB_PASSWORD=super-secret-password
+```
+
+The Secret manifest contains a plaintext test password and is therefore intentionally excluded from Git using `.gitignore`:
+
+```text
+kubernetes/secret.yaml
+```
+
+The Secret exists only in the local Kubernetes cluster for this lab.
+
+In a production environment, sensitive credentials should be managed securely, for example with an external secret-management system or another appropriate secret delivery mechanism.
 
 ## What I Practiced
 
@@ -113,8 +153,10 @@ Sensitive values such as passwords, API keys, and tokens should not be stored in
 * Scaled a Deployment from 2 to 3 replicas
 * Practiced Kubernetes desired-state reconciliation
 * Performed a rolling update from `nginx:alpine` to `nginx:1.29-alpine`
-* Injected configuration into Pods using a ConfigMap
-* Verified environment variables inside a running container
+* Injected non-sensitive configuration using a ConfigMap
+* Injected sensitive configuration using a Secret
+* Verified ConfigMap and Secret environment variables inside a running container
+* Practiced keeping sensitive configuration out of Git
 
 ## Verification
 
@@ -148,6 +190,12 @@ Check the ConfigMap:
 kubectl describe configmap nginx-config
 ```
 
+Check the Secret:
+
+```bash
+kubectl get secret app-secret
+```
+
 Test the Service from inside the cluster:
 
 ```bash
@@ -171,4 +219,10 @@ Check ConfigMap environment variables:
 
 ```bash
 kubectl exec <POD_NAME> -- env | grep APP_
+```
+
+Check Secret environment variables:
+
+```bash
+kubectl exec <POD_NAME> -- env | grep DB_PASSWORD
 ```

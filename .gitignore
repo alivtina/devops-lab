@@ -12,3 +12,6 @@ system-health.log
 
 # Ansible
 ansible/inventory.ini
+
+# Kubernetes
+kubernetes/secret.yaml
