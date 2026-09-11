@@ -2,7 +2,7 @@
 
 ## Goal
 
-Practice Kubernetes fundamentals by deploying, exposing, configuring, health-checking, and troubleshooting a containerized Nginx web application on a local Kubernetes cluster created with `kind`.
+Practice Kubernetes fundamentals by deploying, exposing, configuring, securing, and troubleshooting a containerized Nginx web application on a local Kubernetes cluster created with `kind`.
 
 The lab focuses on practical Kubernetes tasks commonly used in DevOps work.
 
@@ -20,29 +20,35 @@ The lab focuses on practical Kubernetes tasks commonly used in DevOps work.
 ```text
 Arch Linux host
       │
-      │ kubectl
+      │ kubectl / curl
       ▼
-┌──────────────────────────────┐
-│       Kind cluster           │
-│                              │
-│  ┌────────────────────────┐  │
-│  │ Service: webapp        │  │
-│  │ ClusterIP :80          │  │
-│  └───────────┬────────────┘  │
-│              │ selector      │
-│              │ app=webapp    │
-│       ┌──────┴──────┐        │
-│       ▼             ▼        │
-│   ┌────────┐    ┌────────┐   │
-│   │ Pod    │    │ Pod    │   │
-│   │ Nginx  │    │ Nginx  │   │
-│   └────────┘    └────────┘   │
-│       │             │        │
-│       ├─ ConfigMap            │
-│       ├─ Secret               │
-│       ├─ Probes               │
-│       └─ Resources            │
-└──────────────────────────────┘
+┌─────────────────────────────────────────┐
+│              Kind cluster               │
+│                                         │
+│  ┌───────────────────────────────────┐  │
+│  │ Ingress: webapp.local             │  │
+│  └─────────────────┬─────────────────┘  │
+│                    │                    │
+│  ┌─────────────────▼─────────────────┐  │
+│  │ Service: webapp                   │  │
+│  │ ClusterIP :80                     │  │
+│  └─────────────────┬─────────────────┘  │
+│                    │ selector           │
+│                    │ app=webapp         │
+│              ┌─────┴─────┐              │
+│              ▼           ▼              │
+│          ┌────────┐  ┌────────┐         │
+│          │ Pod    │  │ Pod    │         │
+│          │ Nginx  │  │ Nginx  │         │
+│          └────────┘  └────────┘         │
+│              │           │              │
+│              ├─ ConfigMap                │
+│              ├─ Secret                   │
+│              ├─ Probes                   │
+│              └─ Resources                │
+│                                         │
+│  NetworkPolicy controls Pod traffic     │
+└─────────────────────────────────────────┘
 ```
 
 ## Deployment
@@ -79,7 +85,7 @@ Configuration:
 * Target port: `80`
 * Selector: `app=webapp`
 
-The Service automatically routes traffic to healthy Pods matching its selector.
+The Service provides stable networking to Pods matching its selector.
 
 Check the Service:
 
@@ -304,6 +310,220 @@ Rollback
 Verify healthy state
 ```
 
+## Persistent Storage
+
+A PersistentVolumeClaim (PVC) was used to provide persistent storage to a Pod.
+
+The PVC requested:
+
+```yaml
+accessModes:
+  - ReadWriteOnce
+resources:
+  requests:
+    storage: 1Gi
+```
+
+The cluster dynamically provisioned a PersistentVolume using the default `local-path` StorageClass.
+
+The PVC initially remained `Pending` because the StorageClass uses `WaitForFirstConsumer`. After a Pod consumed the PVC, it became `Bound`.
+
+A test file was written to the mounted volume:
+
+```bash
+kubectl exec storage-demo -- \
+  sh -c 'echo "Hello from persistent storage" > /data/hello.txt'
+```
+
+The Pod was then deleted and recreated. The file remained available after the new Pod started, demonstrating persistence across Pod replacement.
+
+Key concepts practiced:
+
+* PersistentVolumeClaim
+* PersistentVolume
+* StorageClass
+* `ReadWriteOnce`
+* Dynamic provisioning
+* `WaitForFirstConsumer`
+* Persistent data across Pod replacement
+
+## Ingress
+
+An NGINX Ingress Controller was installed in the local `kind` cluster.
+
+An Ingress resource routes HTTP traffic for:
+
+```text
+webapp.local
+```
+
+to the `webapp` Service.
+
+The routing configuration uses:
+
+```yaml
+rules:
+  - host: webapp.local
+    http:
+      paths:
+        - path: /
+          pathType: Prefix
+```
+
+The request path was tested end-to-end:
+
+```text
+Arch host
+    ↓
+NGINX Ingress Controller
+    ↓
+Ingress rule: webapp.local /
+    ↓
+webapp Service :80
+    ↓
+webapp Pods
+    ↓
+Nginx
+```
+
+The hostname was mapped locally using `/etc/hosts`.
+
+Verification:
+
+```bash
+curl http://webapp.local:30827
+```
+
+This demonstrated the difference between:
+
+* **Service** — provides stable networking to Pods
+* **Ingress** — defines HTTP/HTTPS routing rules
+* **Ingress Controller** — implements the actual routing
+
+## Namespaces and RBAC
+
+A separate `development` Namespace was created to practice resource isolation and access control.
+
+A ServiceAccount named `webapp-reader` was created with a Role that allows:
+
+```text
+get
+list
+watch
+```
+
+on Pods.
+
+A RoleBinding connects the ServiceAccount to the Role.
+
+The permission model is:
+
+```text
+ServiceAccount
+      ↓
+RoleBinding
+      ↓
+Role
+      ↓
+get / list / watch Pods
+```
+
+Permissions were verified with:
+
+```bash
+kubectl auth can-i get pods \
+  --as=system:serviceaccount:development:webapp-reader \
+  -n development
+```
+
+Result:
+
+```text
+yes
+```
+
+Unauthorized operations were also tested:
+
+```bash
+kubectl auth can-i delete pods \
+  --as=system:serviceaccount:development:webapp-reader \
+  -n development
+```
+
+Result:
+
+```text
+no
+```
+
+This demonstrated basic Kubernetes RBAC using:
+
+* Namespace
+* ServiceAccount
+* Role
+* RoleBinding
+* `kubectl auth can-i`
+
+## NetworkPolicy
+
+A NetworkPolicy was used to control Pod-to-Pod traffic.
+
+The `allow-client-to-server` policy selects Pods with:
+
+```text
+run=server
+```
+
+and allows ingress only from Pods with:
+
+```text
+role=client
+```
+
+on TCP port `80`.
+
+The policy therefore allows:
+
+```text
+client ──────→ server :80
+   ✅
+```
+
+while blocking unauthorized Pods:
+
+```text
+attacker ────→ server :80
+   ❌
+```
+
+The allowed connection was verified with:
+
+```bash
+kubectl exec -n development client -- \
+  curl -I --max-time 5 http://10.244.0.53
+```
+
+Result:
+
+```text
+HTTP/1.1 200 OK
+```
+
+An unauthorized connection was tested with:
+
+```bash
+kubectl exec -n development attacker -- \
+  curl -I --max-time 5 http://10.244.0.53
+```
+
+Result:
+
+```text
+curl: (28) Connection timed out
+```
+
+This demonstrated how NetworkPolicy can restrict network communication between Pods based on labels.
+
 ## Troubleshooting
 
 The lab included several Kubernetes troubleshooting scenarios.
@@ -384,6 +604,16 @@ A liveness failure caused the container to restart.
 * Configured readiness probes
 * Configured liveness probes
 * Configured CPU and memory requests/limits
+* Used PersistentVolumeClaims and PersistentVolumes
+* Practiced dynamic storage provisioning
+* Tested persistence across Pod replacement
+* Configured an Ingress and NGINX Ingress Controller
+* Practiced Namespaces
+* Created ServiceAccounts
+* Configured basic RBAC with Roles and RoleBindings
+* Verified RBAC permissions with `kubectl auth can-i`
+* Configured NetworkPolicy
+* Tested allowed and blocked Pod-to-Pod traffic
 * Investigated `ImagePullBackOff`
 * Investigated `CrashLoopBackOff`
 * Investigated Service selector problems
@@ -430,6 +660,20 @@ kubectl run curl \
   curl http://webapp
 ```
 
+Check RBAC:
+
+```bash
+kubectl auth can-i get pods \
+  --as=system:serviceaccount:development:webapp-reader \
+  -n development
+```
+
+Check NetworkPolicy:
+
+```bash
+kubectl get networkpolicy -n development
+```
+
 ## Files
 
 ```text
@@ -437,7 +681,10 @@ kubernetes/
 ├── README.md
 ├── deployment.yaml
 ├── service.yaml
-└── configmap.yaml
+├── configmap.yaml
+└── network-policy.yaml
 ```
 
 The Secret manifest is intentionally not stored in the repository.
+
+The PersistentVolume and Ingress resources used during the lab were created as separate exercises and can be added to the repository when they are finalized as reusable manifests.
