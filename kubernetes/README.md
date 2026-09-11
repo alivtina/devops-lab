@@ -2,7 +2,9 @@
 
 ## Goal
 
-Practice Kubernetes fundamentals by deploying and exposing a containerized Nginx application on a local Kubernetes cluster created with `kind`.
+Practice Kubernetes fundamentals by deploying, exposing, configuring, health-checking, and troubleshooting a containerized Nginx web application on a local Kubernetes cluster created with `kind`.
+
+The lab focuses on practical Kubernetes tasks commonly used in DevOps work.
 
 ## Environment
 
@@ -10,219 +12,432 @@ Practice Kubernetes fundamentals by deploying and exposing a containerized Nginx
 * Docker
 * kind
 * kubectl
-* Kubernetes cluster with a single control-plane node
+* Local Kubernetes cluster with a single control-plane node
+* Nginx `1.29-alpine`
 
 ## Architecture
 
 ```text
 Arch Linux host
       │
-      │ HTTP :<NODE_PORT>
+      │ kubectl
       ▼
-Kind Kubernetes node
-      │
-      ▼
-NodePort Service
-nginx-deployment
-      │
-      │ selector: app=nginx-deployment
-      ▼
-┌─────────────────────────────┐
-│ Deployment: nginx-deployment│
-│                             │
-│  ┌─────────┐  ┌─────────┐  │
-│  │  Pod    │  │  Pod    │  │
-│  │  Nginx  │  │  Nginx  │  │
-│  └─────────┘  └─────────┘  │
-└─────────────────────────────┘
+┌──────────────────────────────┐
+│       Kind cluster           │
+│                              │
+│  ┌────────────────────────┐  │
+│  │ Service: webapp        │  │
+│  │ ClusterIP :80          │  │
+│  └───────────┬────────────┘  │
+│              │ selector      │
+│              │ app=webapp    │
+│       ┌──────┴──────┐        │
+│       ▼             ▼        │
+│   ┌────────┐    ┌────────┐   │
+│   │ Pod    │    │ Pod    │   │
+│   │ Nginx  │    │ Nginx  │   │
+│   └────────┘    └────────┘   │
+│       │             │        │
+│       ├─ ConfigMap            │
+│       ├─ Secret               │
+│       ├─ Probes               │
+│       └─ Resources            │
+└──────────────────────────────┘
 ```
 
 ## Deployment
 
-The application is managed by a Kubernetes Deployment with:
+The application is managed by a Kubernetes Deployment named `webapp`.
+
+Configuration:
 
 * 2 replicas
-* Nginx container
-* `nginx:1.29-alpine` image
+* Nginx `1.29-alpine`
 * Container port `80`
+* ConfigMap environment variables
+* Secret environment variable
+* Readiness probe
+* Liveness probe
+* CPU and memory requests/limits
 
-The Deployment maintains the desired number of Pods and replaces Pods when the Pod template changes.
+The Deployment maintains the desired number of Pods and performs rolling updates when the Pod template changes.
+
+Check the Deployment:
+
+```bash
+kubectl get deployment webapp
+kubectl describe deployment webapp
+```
 
 ## Service
 
-A `NodePort` Service exposes the Nginx application.
+The application is exposed internally through a `ClusterIP` Service named `webapp`.
+
+Configuration:
 
 * Service port: `80`
 * Target port: `80`
-* NodePort: dynamically assigned by Kubernetes
+* Selector: `app=webapp`
 
-The Service uses the selector:
+The Service automatically routes traffic to healthy Pods matching its selector.
 
-```text
-app=nginx-deployment
+Check the Service:
+
+```bash
+kubectl get service webapp
+kubectl describe service webapp
 ```
 
-This ensures that traffic is sent only to the Pods belonging to this Deployment.
+Check the endpoints:
+
+```bash
+kubectl get endpointslices
+```
+
+The EndpointSlice contains the IP addresses of the Pods selected by the Service.
+
+Test connectivity from inside the cluster:
+
+```bash
+kubectl run curl \
+  --image=curlimages/curl:latest \
+  --rm -it -- \
+  curl http://webapp
+```
 
 ## ConfigMap
 
-A ConfigMap provides non-sensitive configuration to Kubernetes Pods.
+A ConfigMap provides non-sensitive application configuration.
 
-This lab uses `nginx-config` with:
+This lab uses `webapp-config`:
 
 ```text
 APP_ENV=development
 APP_MESSAGE=Hello from Kubernetes
 ```
 
-The Deployment injects the ConfigMap values into the container as environment variables:
+The Deployment injects the values as environment variables:
 
 ```yaml
 envFrom:
   - configMapRef:
-      name: nginx-config
+      name: webapp-config
 ```
 
-The configuration was verified inside a running Pod:
+Verify the configuration inside a running Pod:
 
 ```bash
-kubectl exec <POD_NAME> -- env | grep APP_
-```
-
-Expected output:
-
-```text
-APP_ENV=development
-APP_MESSAGE=Hello from Kubernetes
+kubectl exec deploy/webapp -- env | grep APP_
 ```
 
 ConfigMaps allow application configuration to be separated from the container image.
 
 ## Secret
 
-A Kubernetes Secret is used for sensitive configuration such as passwords, API keys, and tokens.
+A Kubernetes Secret is used for sensitive configuration.
 
-This lab uses a Secret named `app-secret` containing:
+This lab uses a local Secret named `webapp-secret` containing a test database password.
 
-```text
-DB_PASSWORD=super-secret-password
-```
-
-The Secret is injected into the Deployment as an environment variable:
+The Deployment injects it as an environment variable:
 
 ```yaml
 envFrom:
-  - configMapRef:
-      name: nginx-config
   - secretRef:
-      name: app-secret
+      name: webapp-secret
 ```
 
-The Secret was verified inside a running Pod:
+The Secret manifest is intentionally excluded from Git because it contains a plaintext test password.
+
+The local Secret can be checked with:
 
 ```bash
-kubectl exec <POD_NAME> -- env | grep DB_PASSWORD
+kubectl get secret webapp-secret
 ```
 
-Expected output:
+For a real production environment, credentials should be managed using an appropriate secret-management solution rather than committed to Git.
+
+## Health Probes
+
+The application uses both readiness and liveness probes.
+
+### Readiness probe
+
+```yaml
+readinessProbe:
+  httpGet:
+    path: /
+    port: 80
+  initialDelaySeconds: 2
+  periodSeconds: 5
+```
+
+The readiness probe determines whether a Pod is ready to receive traffic.
+
+A failed readiness probe makes the Pod `NotReady` but does not restart the container.
+
+### Liveness probe
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /
+    port: 80
+  initialDelaySeconds: 5
+  periodSeconds: 10
+```
+
+The liveness probe determines whether the container should be restarted.
+
+A failed liveness probe can cause Kubernetes to restart the container.
+
+The practical distinction is:
 
 ```text
-DB_PASSWORD=super-secret-password
+Readiness → Should this Pod receive traffic?
+
+Liveness  → Should this container be restarted?
 ```
 
-The Secret manifest contains a plaintext test password and is therefore intentionally excluded from Git using `.gitignore`:
+## Resource Requests and Limits
+
+The containers define CPU and memory resources:
+
+```yaml
+resources:
+  requests:
+    cpu: "100m"
+    memory: "64Mi"
+  limits:
+    cpu: "500m"
+    memory: "128Mi"
+```
+
+Requests influence scheduling and represent the resources Kubernetes expects the container to require.
+
+Limits define the maximum resources the container can use.
+
+The resulting Pod has `Burstable` QoS.
+
+Check resources with:
+
+```bash
+kubectl describe pod -l app=webapp
+```
+
+## Rolling Updates
+
+The Deployment uses Kubernetes rolling updates.
+
+A new image version can be deployed with:
+
+```bash
+kubectl set image deployment/webapp nginx=nginx:<VERSION>
+```
+
+Kubernetes creates new Pods while gradually replacing the old Pods.
+
+Check rollout status:
+
+```bash
+kubectl rollout status deployment/webapp
+```
+
+View rollout history:
+
+```bash
+kubectl rollout history deployment/webapp
+```
+
+## Rollback
+
+A failed deployment was intentionally simulated by changing the image to a non-existent image:
 
 ```text
-kubernetes/secret.yaml
+nginx:this-image-does-not-exist
 ```
 
-The Secret exists only in the local Kubernetes cluster for this lab.
+The new Pod entered:
 
-In a production environment, sensitive credentials should be managed securely, for example with an external secret-management system or another appropriate secret delivery mechanism.
+```text
+ImagePullBackOff
+```
+
+The existing healthy Pods remained running while Kubernetes attempted the rolling update.
+
+The failed rollout was diagnosed using:
+
+```bash
+kubectl get pods -l app=webapp
+kubectl describe pod <POD_NAME>
+```
+
+The problem was identified as an invalid container image.
+
+The previous healthy revision was restored with:
+
+```bash
+kubectl rollout undo deployment/webapp
+```
+
+The rollout was then verified:
+
+```bash
+kubectl rollout status deployment/webapp
+kubectl get pods -l app=webapp
+```
+
+This demonstrated a complete deployment recovery workflow:
+
+```text
+Deploy
+  ↓
+New Pod fails
+  ↓
+Inspect status
+  ↓
+Inspect Pod details/events
+  ↓
+Identify root cause
+  ↓
+Rollback
+  ↓
+Verify healthy state
+```
+
+## Troubleshooting
+
+The lab included several Kubernetes troubleshooting scenarios.
+
+### ImagePullBackOff
+
+Cause:
+
+* Invalid or unavailable container image.
+
+Useful commands:
+
+```bash
+kubectl get pods
+kubectl describe pod <POD_NAME>
+```
+
+Container logs are generally unavailable when the container never successfully starts.
+
+### CrashLoopBackOff
+
+Cause:
+
+* Application starts but repeatedly exits or crashes.
+
+Useful commands:
+
+```bash
+kubectl get pods
+kubectl logs <POD_NAME>
+kubectl describe pod <POD_NAME>
+```
+
+### Service selector mismatch
+
+A Service with an incorrect selector produced an empty EndpointSlice.
+
+Troubleshooting:
+
+```bash
+kubectl describe service <SERVICE_NAME>
+kubectl get endpointslices
+kubectl get pods --show-labels
+```
+
+The issue was resolved by matching the Service selector with the Pod labels.
+
+### Probe failure
+
+Readiness and liveness failures were intentionally tested.
+
+A readiness failure resulted in:
+
+```text
+0/1 Running
+```
+
+The container was still running, but Kubernetes considered the Pod not ready to receive traffic.
+
+A liveness failure caused the container to restart.
 
 ## What I Practiced
 
 * Created a local Kubernetes cluster with `kind`
 * Used `kubectl` to manage Kubernetes resources
-* Created a Deployment using declarative YAML
-* Created a NodePort Service using declarative YAML
-* Used labels and selectors to connect Services to Pods
-* Inspected Pod IP addresses and EndpointSlices
+* Created Deployments using declarative YAML
+* Created and inspected Services
+* Used labels and selectors
+* Inspected EndpointSlices
 * Tested Service connectivity from inside the cluster
-* Tested NodePort connectivity from the host
-* Scaled a Deployment from 2 to 3 replicas
+* Scaled Deployments
 * Practiced Kubernetes desired-state reconciliation
-* Performed a rolling update from `nginx:alpine` to `nginx:1.29-alpine`
-* Injected non-sensitive configuration using a ConfigMap
-* Injected sensitive configuration using a Secret
-* Verified ConfigMap and Secret environment variables inside a running container
-* Practiced keeping sensitive configuration out of Git
+* Performed rolling updates
+* Performed deployment rollbacks
+* Used ConfigMaps for non-sensitive configuration
+* Used Secrets for sensitive configuration
+* Kept Secret configuration out of Git
+* Configured readiness probes
+* Configured liveness probes
+* Configured CPU and memory requests/limits
+* Investigated `ImagePullBackOff`
+* Investigated `CrashLoopBackOff`
+* Investigated Service selector problems
+* Investigated health probe failures
+* Used `kubectl describe`, `kubectl logs`, `kubectl exec`, and rollout commands for troubleshooting
 
 ## Verification
 
-Check the Deployment:
+Check the application:
 
 ```bash
-kubectl get deployments
-```
-
-Check Pods:
-
-```bash
-kubectl get pods -o wide
-```
-
-Check Services:
-
-```bash
-kubectl get services
-```
-
-Check Service endpoints:
-
-```bash
+kubectl get deployment webapp
+kubectl get pods -l app=webapp
+kubectl get service webapp
 kubectl get endpointslices
 ```
 
-Check the ConfigMap:
+Check configuration:
 
 ```bash
-kubectl describe configmap nginx-config
+kubectl exec deploy/webapp -- env | grep APP_
+kubectl exec deploy/webapp -- env | grep DB_PASSWORD
 ```
 
-Check the Secret:
+Check probes and resources:
 
 ```bash
-kubectl get secret app-secret
+kubectl describe pod -l app=webapp
 ```
 
-Test the Service from inside the cluster:
+Check rollout:
 
 ```bash
-kubectl run curl --image=curlimages/curl:latest --rm -it -- curl http://nginx-deployment
+kubectl rollout status deployment/webapp
+kubectl rollout history deployment/webapp
 ```
 
-Test the NodePort from the host:
+Test the Service:
 
 ```bash
-curl http://<KIND_NODE_IP>:<NODE_PORT>
+kubectl run curl \
+  --image=curlimages/curl:latest \
+  --rm -it -- \
+  curl http://webapp
 ```
 
-Check the current container image:
+## Files
 
-```bash
-kubectl get deployment nginx-deployment \
-  -o jsonpath='{.spec.template.spec.containers[0].image}{"\n"}'
+```text
+kubernetes/
+├── README.md
+├── deployment.yaml
+├── service.yaml
+└── configmap.yaml
 ```
 
-Check ConfigMap environment variables:
-
-```bash
-kubectl exec <POD_NAME> -- env | grep APP_
-```
-
-Check Secret environment variables:
-
-```bash
-kubectl exec <POD_NAME> -- env | grep DB_PASSWORD
-```
+The Secret manifest is intentionally not stored in the repository.

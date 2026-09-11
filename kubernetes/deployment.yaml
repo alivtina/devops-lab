@@ -1,21 +1,16 @@
 apiVersion: apps/v1
 kind: Deployment
-
 metadata:
-  name: nginx-deployment
-
+  name: webapp
 spec:
   replicas: 2
-
   selector:
     matchLabels:
-      app: nginx-deployment
-
+      app: webapp
   template:
     metadata:
       labels:
-        app: nginx-deployment
-
+        app: webapp
     spec:
       containers:
         - name: nginx
@@ -25,6 +20,28 @@ spec:
 
           envFrom:
             - configMapRef:
-                name: nginx-config
+                name: webapp-config
             - secretRef:
-                name: app-secret
+                name: webapp-secret
+
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 2
+            periodSeconds: 5
+
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 80
+            initialDelaySeconds: 5
+            periodSeconds: 10
+
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "64Mi"
+            limits:
+              cpu: "500m"
+              memory: "128Mi"

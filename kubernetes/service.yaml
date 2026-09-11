@@ -1,15 +1,11 @@
 apiVersion: v1
 kind: Service
-
 metadata:
-  name: nginx-deployment
-
+  name: webapp
 spec:
-  type: NodePort
-
+  type: ClusterIP
   selector:
-    app: nginx-deployment
-
+    app: webapp
   ports:
     - port: 80
       targetPort: 80
