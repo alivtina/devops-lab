@@ -1,246 +1,283 @@
-# Kubernetes Lab
-
-## Goal
+# Kubernetes Web Application Lab
 
 Practice Kubernetes fundamentals by deploying, exposing, configuring, securing, and troubleshooting a containerized Nginx web application on a local Kubernetes cluster created with `kind`.
 
-The lab focuses on practical Kubernetes tasks commonly used in DevOps work.
+## Goal
+
+This project demonstrates practical Kubernetes concepts through a small web application deployed to a local cluster.
+
+The main repository manifests focus on:
+
+* Deployments
+* Services
+* ConfigMaps
+* resource requests and limits
+* health probes
+* rolling updates
+* NetworkPolicy
+
+Additional Kubernetes features such as persistent storage, Ingress, RBAC, and troubleshooting scenarios were also practiced using separate local manifests kept outside the repository.
 
 ## Environment
 
-* Arch Linux host
-* Docker
-* kind
-* kubectl
-* Local Kubernetes cluster with a single control-plane node
-* Nginx `1.29-alpine`
+* Host: Arch Linux
+* Kubernetes cluster: `kind`
+* Container runtime: Docker
+* Application: Nginx
+* Repository: `devops-lab`
 
 ## Architecture
 
 ```text
-Arch Linux host
-      │
-      │ kubectl / curl
-      ▼
-┌─────────────────────────────────────────┐
-│              Kind cluster               │
-│                                         │
-│  ┌───────────────────────────────────┐  │
-│  │ Ingress: webapp.local             │  │
-│  └─────────────────┬─────────────────┘  │
-│                    │                    │
-│  ┌─────────────────▼─────────────────┐  │
-│  │ Service: webapp                   │  │
-│  │ ClusterIP :80                     │  │
-│  └─────────────────┬─────────────────┘  │
-│                    │ selector           │
-│                    │ app=webapp         │
-│              ┌─────┴─────┐              │
-│              ▼           ▼              │
-│          ┌────────┐  ┌────────┐         │
-│          │ Pod    │  │ Pod    │         │
-│          │ Nginx  │  │ Nginx  │         │
-│          └────────┘  └────────┘         │
-│              │           │              │
-│              ├─ ConfigMap                │
-│              ├─ Secret                   │
-│              ├─ Probes                   │
-│              └─ Resources                │
-│                                         │
-│  NetworkPolicy controls Pod traffic     │
-└─────────────────────────────────────────┘
+                    ┌─────────────────────┐
+                    │   kind cluster     │
+                    │                     │
+                    │  ┌───────────────┐  │
+                    │  │  Deployment   │  │
+                    │  │    webapp     │  │
+                    │  └───────┬───────┘  │
+                    │          │          │
+                    │      ┌───▼───┐      │
+                    │      │ Nginx │      │
+                    │      │ Pods   │      │
+                    │      └───┬───┘      │
+                    │          │          │
+                    │     ┌────▼─────┐    │
+                    │     │ Service  │    │
+                    │     │ ClusterIP│    │
+                    │     └──────────┘    │
+                    │                     │
+                    └─────────────────────┘
 ```
 
-## Deployment
+The application is exposed internally through a Kubernetes `Service`.
 
-The application is managed by a Kubernetes Deployment named `webapp`.
+Configuration is provided through a `ConfigMap`, while network access between Pods is controlled using a `NetworkPolicy`.
 
-Configuration:
+## Repository Structure
 
-* 2 replicas
-* Nginx `1.29-alpine`
-* Container port `80`
-* ConfigMap environment variables
-* Secret environment variable
-* Readiness probe
-* Liveness probe
-* CPU and memory requests/limits
+```text
+kubernetes/
+├── README.md
+├── deployment.yaml
+├── service.yaml
+├── configmap.yaml
+└── network-policy.yaml
+```
 
-The Deployment maintains the desired number of Pods and performs rolling updates when the Pod template changes.
+The repository contains the finalized manifests used for the main Kubernetes application.
+
+Additional exercises are kept locally outside the repository in:
+
+```text
+~/tmp/
+```
+
+These files are practice material and are not part of the finalized repository configuration.
+
+---
+
+# Deployment
+
+The application is deployed using a Kubernetes `Deployment`.
+
+The Deployment:
+
+* runs two Nginx replicas
+* manages the desired number of Pods
+* uses label selectors
+* performs rolling updates
+* maintains the desired state
+
+Example:
+
+```bash
+kubectl apply -f kubernetes/deployment.yaml
+```
 
 Check the Deployment:
 
 ```bash
-kubectl get deployment webapp
+kubectl get deployments
+```
+
+Check the Pods:
+
+```bash
+kubectl get pods -o wide
+```
+
+Check Deployment details:
+
+```bash
 kubectl describe deployment webapp
 ```
 
-## Service
+## Desired State
 
-The application is exposed internally through a `ClusterIP` Service named `webapp`.
+Kubernetes continuously compares the actual cluster state with the desired state defined by the manifests.
 
-Configuration:
+For example, if one of the two Pods is deleted:
 
-* Service port: `80`
-* Target port: `80`
-* Selector: `app=webapp`
+```bash
+kubectl delete pod <pod-name>
+```
 
-The Service provides stable networking to Pods matching its selector.
+the Deployment controller creates a replacement Pod automatically.
+
+This demonstrates Kubernetes reconciliation.
+
+---
+
+# Service
+
+The application is exposed using a Kubernetes `Service`.
+
+```bash
+kubectl apply -f kubernetes/service.yaml
+```
 
 Check the Service:
 
 ```bash
-kubectl get service webapp
-kubectl describe service webapp
+kubectl get service
 ```
 
-Check the endpoints:
+Check endpoints:
 
 ```bash
-kubectl get endpointslices
+kubectl get endpoints
 ```
 
-The EndpointSlice contains the IP addresses of the Pods selected by the Service.
+The Service selects Pods using their labels.
 
-Test connectivity from inside the cluster:
+This provides a stable network endpoint even when individual Pods are replaced.
+
+---
+
+# ConfigMap
+
+Application configuration is stored in a `ConfigMap`.
 
 ```bash
-kubectl run curl \
-  --image=curlimages/curl:latest \
-  --rm -it -- \
-  curl http://webapp
+kubectl apply -f kubernetes/configmap.yaml
 ```
 
-## ConfigMap
+Check the ConfigMap:
 
-A ConfigMap provides non-sensitive application configuration.
+```bash
+kubectl get configmap
+```
 
-This lab uses `webapp-config`:
+Inspect it:
+
+```bash
+kubectl describe configmap webapp-config
+```
+
+The ConfigMap demonstrates separating application configuration from the container image.
+
+A separate ConfigMap exercise was also created locally as:
 
 ```text
-APP_ENV=development
-APP_MESSAGE=Hello from Kubernetes
+~/tmp/webapp-config.yaml
 ```
 
-The Deployment injects the values as environment variables:
+---
 
-```yaml
-envFrom:
-  - configMapRef:
-      name: webapp-config
-```
+# Secrets
 
-Verify the configuration inside a running Pod:
-
-```bash
-kubectl exec deploy/webapp -- env | grep APP_
-```
-
-ConfigMaps allow application configuration to be separated from the container image.
-
-## Secret
-
-A Kubernetes Secret is used for sensitive configuration.
-
-This lab uses a local Secret named `webapp-secret` containing a test database password.
-
-The Deployment injects it as an environment variable:
-
-```yaml
-envFrom:
-  - secretRef:
-      name: webapp-secret
-```
-
-The Secret manifest is intentionally excluded from Git because it contains a plaintext test password.
-
-The local Secret can be checked with:
-
-```bash
-kubectl get secret webapp-secret
-```
-
-For a real production environment, credentials should be managed using an appropriate secret-management solution rather than committed to Git.
-
-## Health Probes
-
-The application uses both readiness and liveness probes.
-
-### Readiness probe
-
-```yaml
-readinessProbe:
-  httpGet:
-    path: /
-    port: 80
-  initialDelaySeconds: 2
-  periodSeconds: 5
-```
-
-The readiness probe determines whether a Pod is ready to receive traffic.
-
-A failed readiness probe makes the Pod `NotReady` but does not restart the container.
-
-### Liveness probe
-
-```yaml
-livenessProbe:
-  httpGet:
-    path: /
-    port: 80
-  initialDelaySeconds: 5
-  periodSeconds: 10
-```
-
-The liveness probe determines whether the container should be restarted.
-
-A failed liveness probe can cause Kubernetes to restart the container.
-
-The practical distinction is:
+A Kubernetes Secret was practiced separately using:
 
 ```text
-Readiness → Should this Pod receive traffic?
-
-Liveness  → Should this container be restarted?
+~/tmp/webapp-secret.yaml
 ```
 
-## Resource Requests and Limits
+The practice Secret contains a test password and is intentionally kept outside the repository.
 
-The containers define CPU and memory resources:
+Secrets should not be committed to Git in plaintext.
+
+The repository `.gitignore` therefore excludes:
+
+```text
+kubernetes/secret.yaml
+```
+
+When testing a Secret-mounted environment variable, the value should not be printed. A safe verification is:
+
+```bash
+kubectl exec deploy/webapp -- \
+  sh -c 'test -n "$DB_PASSWORD" && echo "DB_PASSWORD is set"'
+```
+
+---
+
+# Health Probes
+
+Kubernetes health probes were practiced using a separate local exercise:
+
+```text
+~/tmp/probe-demo.yaml
+```
+
+The exercise demonstrates:
+
+* liveness probes
+* readiness probes
+* HTTP health checks
+* probe failures
+* container restarts
+* traffic being removed from unhealthy Pods
+
+A failed liveness probe can cause Kubernetes to restart a container.
+
+A failed readiness probe removes the Pod from the Service endpoints without necessarily restarting the container.
+
+---
+
+# Resource Requests and Limits
+
+Container resource management was practiced using:
+
+```text
+~/tmp/resources-demo.yaml
+```
+
+The Deployment in the main repository also defines resource requests and limits.
+
+Requests describe the amount of CPU and memory required by a container.
+
+Limits define the maximum amount of CPU and memory the container is allowed to use.
+
+Example concept:
 
 ```yaml
 resources:
   requests:
-    cpu: "100m"
-    memory: "64Mi"
+    cpu: 100m
+    memory: 64Mi
   limits:
-    cpu: "500m"
-    memory: "128Mi"
+    cpu: 500m
+    memory: 128Mi
 ```
 
-Requests influence scheduling and represent the resources Kubernetes expects the container to require.
-
-Limits define the maximum resources the container can use.
-
-The resulting Pod has `Burstable` QoS.
-
-Check resources with:
+Check resource configuration:
 
 ```bash
-kubectl describe pod -l app=webapp
+kubectl describe pod <pod-name>
 ```
 
-## Rolling Updates
-
-The Deployment uses Kubernetes rolling updates.
-
-A new image version can be deployed with:
+If Metrics Server is available:
 
 ```bash
-kubectl set image deployment/webapp nginx=nginx:<VERSION>
+kubectl top pods
 ```
 
-Kubernetes creates new Pods while gradually replacing the old Pods.
+---
+
+# Rolling Updates and Rollbacks
+
+The Deployment supports rolling updates.
 
 Check rollout status:
 
@@ -254,181 +291,132 @@ View rollout history:
 kubectl rollout history deployment/webapp
 ```
 
-## Rollback
-
-A failed deployment was intentionally simulated by changing the image to a non-existent image:
-
-```text
-nginx:this-image-does-not-exist
-```
-
-The new Pod entered:
-
-```text
-ImagePullBackOff
-```
-
-The existing healthy Pods remained running while Kubernetes attempted the rolling update.
-
-The failed rollout was diagnosed using:
-
-```bash
-kubectl get pods -l app=webapp
-kubectl describe pod <POD_NAME>
-```
-
-The problem was identified as an invalid container image.
-
-The previous healthy revision was restored with:
+A previous revision can be restored using:
 
 ```bash
 kubectl rollout undo deployment/webapp
 ```
 
-The rollout was then verified:
+This demonstrates one of the important Kubernetes operational capabilities: changing application versions while maintaining availability.
 
-```bash
-kubectl rollout status deployment/webapp
-kubectl get pods -l app=webapp
-```
+---
 
-This demonstrated a complete deployment recovery workflow:
+# Persistent Storage
+
+Persistent storage was practiced as a separate Kubernetes exercise.
+
+The following local manifests were used:
 
 ```text
-Deploy
-  ↓
-New Pod fails
-  ↓
-Inspect status
-  ↓
-Inspect Pod details/events
-  ↓
-Identify root cause
-  ↓
-Rollback
-  ↓
-Verify healthy state
+~/tmp/webapp-pvc.yaml
+~/tmp/storage-demo.yaml
 ```
 
-## Persistent Storage
+The exercise demonstrated:
 
-A PersistentVolumeClaim (PVC) was used to provide persistent storage to a Pod.
+* PersistentVolumeClaims
+* PersistentVolumes
+* StorageClasses
+* dynamic provisioning
+* `ReadWriteOnce`
+* `WaitForFirstConsumer`
 
-The PVC requested:
-
-```yaml
-accessModes:
-  - ReadWriteOnce
-resources:
-  requests:
-    storage: 1Gi
-```
-
-The cluster dynamically provisioned a PersistentVolume using the default `local-path` StorageClass.
+The cluster dynamically provisioned persistent storage using the available local-path StorageClass.
 
 The PVC initially remained `Pending` because the StorageClass uses `WaitForFirstConsumer`. After a Pod consumed the PVC, it became `Bound`.
 
-A test file was written to the mounted volume:
+Useful commands:
 
 ```bash
-kubectl exec storage-demo -- \
-  sh -c 'echo "Hello from persistent storage" > /data/hello.txt'
+kubectl get pvc
+kubectl get pv
+kubectl get storageclass
 ```
 
-The Pod was then deleted and recreated. The file remained available after the new Pod started, demonstrating persistence across Pod replacement.
+This exercise helped demonstrate the difference between:
 
-Key concepts practiced:
+* application containers
+* Pods
+* ephemeral container storage
+* persistent storage
 
-* PersistentVolumeClaim
-* PersistentVolume
-* StorageClass
-* `ReadWriteOnce`
-* Dynamic provisioning
-* `WaitForFirstConsumer`
-* Persistent data across Pod replacement
+The storage manifests remain practice material and are not currently finalized repository resources.
 
-## Ingress
+---
+
+# Ingress
 
 An NGINX Ingress Controller was installed in the local `kind` cluster.
 
-An Ingress resource routes HTTP traffic for:
+An Ingress resource was practiced using:
+
+```text
+~/tmp/webapp-ingress.yaml
+```
+
+The exercise demonstrated HTTP routing for:
 
 ```text
 webapp.local
 ```
 
-to the `webapp` Service.
-
-The routing configuration uses:
-
-```yaml
-rules:
-  - host: webapp.local
-    http:
-      paths:
-        - path: /
-          pathType: Prefix
-```
-
-The request path was tested end-to-end:
+Basic architecture:
 
 ```text
-Arch host
-    ↓
-NGINX Ingress Controller
-    ↓
-Ingress rule: webapp.local /
-    ↓
-webapp Service :80
-    ↓
-webapp Pods
-    ↓
-Nginx
+Client
+  │
+  ▼
+Ingress Controller
+  │
+  ▼
+Ingress
+  │
+  ▼
+Service
+  │
+  ▼
+Pods
 ```
 
-The hostname was mapped locally using `/etc/hosts`.
+The exercise demonstrated the distinction between:
 
-Verification:
-
-```bash
-curl http://webapp.local:30827
-```
-
-This demonstrated the difference between:
-
-* **Service** — provides stable networking to Pods
 * **Ingress** — defines HTTP/HTTPS routing rules
 * **Ingress Controller** — implements the actual routing
 
-## Namespaces and RBAC
+Useful commands:
+
+```bash
+kubectl get ingress
+kubectl describe ingress webapp
+kubectl get pods -A
+```
+
+The Ingress configuration remains practice material rather than a finalized repository manifest.
+
+---
+
+# Namespaces and RBAC
 
 A separate `development` Namespace was created to practice resource isolation and access control.
 
-A ServiceAccount named `webapp-reader` was created with a Role that allows:
+The RBAC exercises used:
 
 ```text
-get
-list
-watch
+~/tmp/webapp-reader-role.yaml
+~/tmp/webapp-reader-binding.yaml
 ```
 
-on Pods.
+The exercises demonstrated:
 
-A RoleBinding connects the ServiceAccount to the Role.
+* Namespaces
+* ServiceAccounts
+* Roles
+* RoleBindings
+* permission checks
 
-The permission model is:
+A Role was created to allow read access to Pods.
 
-```text
-ServiceAccount
-      ↓
-RoleBinding
-      ↓
-Role
-      ↓
-get / list / watch Pods
-```
-
-Permissions were verified with:
+Permissions were tested using:
 
 ```bash
 kubectl auth can-i get pods \
@@ -436,255 +424,370 @@ kubectl auth can-i get pods \
   -n development
 ```
 
-Result:
+This demonstrated basic Kubernetes RBAC.
 
-```text
-yes
-```
+The RBAC manifests remain practice material and are not currently finalized repository resources.
 
-Unauthorized operations were also tested:
+---
 
-```bash
-kubectl auth can-i delete pods \
-  --as=system:serviceaccount:development:webapp-reader \
-  -n development
-```
-
-Result:
-
-```text
-no
-```
-
-This demonstrated basic Kubernetes RBAC using:
-
-* Namespace
-* ServiceAccount
-* Role
-* RoleBinding
-* `kubectl auth can-i`
-
-## NetworkPolicy
+# NetworkPolicy
 
 A NetworkPolicy was used to control Pod-to-Pod traffic.
 
-The `allow-client-to-server` policy selects Pods with:
+The practice manifest is:
 
 ```text
-run=server
+~/tmp/server-policy.yaml
 ```
 
-and allows ingress only from Pods with:
+The exercise demonstrated how NetworkPolicy can restrict network communication between Pods based on labels.
 
-```text
-role=client
-```
-
-on TCP port `80`.
-
-The policy therefore allows:
-
-```text
-client ──────→ server :80
-   ✅
-```
-
-while blocking unauthorized Pods:
-
-```text
-attacker ────→ server :80
-   ❌
-```
-
-The allowed connection was verified with:
+Useful commands:
 
 ```bash
-kubectl exec -n development client -- \
-  curl -I --max-time 5 http://10.244.0.53
+kubectl get networkpolicy -A
+kubectl describe networkpolicy -n development
 ```
 
-Result:
+The repository also contains a finalized NetworkPolicy:
 
 ```text
-HTTP/1.1 200 OK
+kubernetes/network-policy.yaml
 ```
 
-An unauthorized connection was tested with:
+This manifest is part of the main Kubernetes application configuration.
+
+---
+
+# Troubleshooting Exercises
+
+Several intentionally broken resources were created to practice Kubernetes troubleshooting.
+
+## Broken Deployment
+
+```text
+~/tmp/broken-deployment.yaml
+```
+
+The exercise was used to investigate Deployment and Pod creation problems.
+
+Useful commands:
 
 ```bash
-kubectl exec -n development attacker -- \
-  curl -I --max-time 5 http://10.244.0.53
+kubectl get deployment
+kubectl get pods
+kubectl describe deployment broken-nginx
+kubectl describe pod <pod-name>
+kubectl get events
 ```
 
-Result:
+---
+
+## CrashLoopBackOff
 
 ```text
-curl: (28) Connection timed out
+~/tmp/crash-deployment.yaml
 ```
 
-This demonstrated how NetworkPolicy can restrict network communication between Pods based on labels.
-
-## Troubleshooting
-
-The lab included several Kubernetes troubleshooting scenarios.
-
-### ImagePullBackOff
-
-Cause:
-
-* Invalid or unavailable container image.
+This exercise demonstrates a container repeatedly starting and failing.
 
 Useful commands:
 
 ```bash
 kubectl get pods
-kubectl describe pod <POD_NAME>
+kubectl describe pod <pod-name>
+kubectl logs <pod-name>
+kubectl logs <pod-name> --previous
 ```
 
-Container logs are generally unavailable when the container never successfully starts.
+`--previous` is particularly useful when the current container has already restarted.
 
-### CrashLoopBackOff
+---
 
-Cause:
+## Broken Service
 
-* Application starts but repeatedly exits or crashes.
+```text
+~/tmp/broken-service.yaml
+```
+
+This exercise demonstrates troubleshooting a Service that does not correctly reach its Pods.
 
 Useful commands:
 
 ```bash
-kubectl get pods
-kubectl logs <POD_NAME>
-kubectl describe pod <POD_NAME>
-```
-
-### Service selector mismatch
-
-A Service with an incorrect selector produced an empty EndpointSlice.
-
-Troubleshooting:
-
-```bash
-kubectl describe service <SERVICE_NAME>
-kubectl get endpointslices
+kubectl get service
+kubectl describe service broken-nginx-service
+kubectl get endpoints
 kubectl get pods --show-labels
 ```
 
-The issue was resolved by matching the Service selector with the Pod labels.
-
-### Probe failure
-
-Readiness and liveness failures were intentionally tested.
-
-A readiness failure resulted in:
+A common troubleshooting approach is:
 
 ```text
-0/1 Running
+Service
+  ↓
+Selector
+  ↓
+Pod labels
+  ↓
+Endpoints
+  ↓
+Pod
 ```
 
-The container was still running, but Kubernetes considered the Pod not ready to receive traffic.
+---
 
-A liveness failure caused the container to restart.
+## Probe Failures
 
-## What I Practiced
-
-* Created a local Kubernetes cluster with `kind`
-* Used `kubectl` to manage Kubernetes resources
-* Created Deployments using declarative YAML
-* Created and inspected Services
-* Used labels and selectors
-* Inspected EndpointSlices
-* Tested Service connectivity from inside the cluster
-* Scaled Deployments
-* Practiced Kubernetes desired-state reconciliation
-* Performed rolling updates
-* Performed deployment rollbacks
-* Used ConfigMaps for non-sensitive configuration
-* Used Secrets for sensitive configuration
-* Kept Secret configuration out of Git
-* Configured readiness probes
-* Configured liveness probes
-* Configured CPU and memory requests/limits
-* Used PersistentVolumeClaims and PersistentVolumes
-* Practiced dynamic storage provisioning
-* Tested persistence across Pod replacement
-* Configured an Ingress and NGINX Ingress Controller
-* Practiced Namespaces
-* Created ServiceAccounts
-* Configured basic RBAC with Roles and RoleBindings
-* Verified RBAC permissions with `kubectl auth can-i`
-* Configured NetworkPolicy
-* Tested allowed and blocked Pod-to-Pod traffic
-* Investigated `ImagePullBackOff`
-* Investigated `CrashLoopBackOff`
-* Investigated Service selector problems
-* Investigated health probe failures
-* Used `kubectl describe`, `kubectl logs`, `kubectl exec`, and rollout commands for troubleshooting
-
-## Verification
-
-Check the application:
-
-```bash
-kubectl get deployment webapp
-kubectl get pods -l app=webapp
-kubectl get service webapp
-kubectl get endpointslices
+```text
+~/tmp/probe-demo.yaml
 ```
 
-Check configuration:
+This exercise demonstrates how failed health checks affect Pods and Services.
+
+Useful commands:
 
 ```bash
-kubectl exec deploy/webapp -- env | grep APP_
-kubectl exec deploy/webapp -- env | grep DB_PASSWORD
+kubectl describe pod <pod-name>
+kubectl get events
+kubectl get endpoints
+kubectl logs <pod-name>
 ```
 
-Check probes and resources:
+---
+
+# What I Practiced
+
+## Core Kubernetes
+
+* Kubernetes architecture and resources
+* `kubectl`
+* YAML manifests
+* Deployments
+* Pods
+* Services
+* Labels and selectors
+* Desired-state reconciliation
+* Rolling updates
+* Rollbacks
+
+## Configuration and Application Health
+
+* ConfigMaps
+* Secrets
+* Environment variables
+* Liveness probes
+* Readiness probes
+* Resource requests and limits
+
+## Storage and Networking
+
+* PersistentVolumeClaims
+* PersistentVolumes
+* StorageClasses
+* Dynamic provisioning
+* `WaitForFirstConsumer`
+* Services
+* Ingress
+* NGINX Ingress Controller
+* NetworkPolicy
+
+## Security and Access Control
+
+* Namespaces
+* ServiceAccounts
+* Roles
+* RoleBindings
+* RBAC
+* `kubectl auth can-i`
+* Kubernetes Secrets
+* NetworkPolicy
+
+## Troubleshooting
+
+* Deployment failures
+* Pod failures
+* `CrashLoopBackOff`
+* Container logs
+* Previous container logs
+* Service selector problems
+* Endpoint troubleshooting
+* Probe failures
+* Kubernetes events
+* Resource inspection
+
+---
+
+# Useful Commands
+
+Check cluster:
 
 ```bash
-kubectl describe pod -l app=webapp
+kubectl cluster-info
+kubectl get nodes
 ```
 
-Check rollout:
+List resources:
 
 ```bash
-kubectl rollout status deployment/webapp
-kubectl rollout history deployment/webapp
+kubectl get all
+kubectl get pods
+kubectl get deployments
+kubectl get services
 ```
 
-Test the Service:
+Detailed information:
 
 ```bash
-kubectl run curl \
-  --image=curlimages/curl:latest \
-  --rm -it -- \
-  curl http://webapp
+kubectl describe pod <pod-name>
+kubectl describe deployment webapp
+kubectl describe service webapp
 ```
 
-Check RBAC:
+Logs:
 
 ```bash
-kubectl auth can-i get pods \
-  --as=system:serviceaccount:development:webapp-reader \
-  -n development
+kubectl logs <pod-name>
+kubectl logs <pod-name> --previous
+```
+
+Events:
+
+```bash
+kubectl get events --sort-by=.lastTimestamp
+```
+
+Execute a command inside a container:
+
+```bash
+kubectl exec -it <pod-name> -- sh
+```
+
+Check labels:
+
+```bash
+kubectl get pods --show-labels
+```
+
+Check Service endpoints:
+
+```bash
+kubectl get endpoints
+```
+
+Check RBAC permissions:
+
+```bash
+kubectl auth can-i get pods
 ```
 
 Check NetworkPolicy:
 
 ```bash
-kubectl get networkpolicy -n development
+kubectl get networkpolicy -A
 ```
 
-## Files
+---
+
+# Verification
+
+Apply the main repository manifests:
+
+```bash
+kubectl apply -f kubernetes/configmap.yaml
+kubectl apply -f kubernetes/deployment.yaml
+kubectl apply -f kubernetes/service.yaml
+kubectl apply -f kubernetes/network-policy.yaml
+```
+
+Check the resulting resources:
+
+```bash
+kubectl get all
+```
+
+Check Pods:
+
+```bash
+kubectl get pods -o wide
+```
+
+Check the Service:
+
+```bash
+kubectl get service webapp
+```
+
+Check the NetworkPolicy:
+
+```bash
+kubectl get networkpolicy
+```
+
+Check Deployment rollout:
+
+```bash
+kubectl rollout status deployment/webapp
+```
+
+---
+
+# Practice Material
+
+Additional Kubernetes exercises are kept locally outside the repository in:
 
 ```text
-kubernetes/
-├── README.md
-├── deployment.yaml
-├── service.yaml
-├── configmap.yaml
-└── network-policy.yaml
+~/tmp/
 ```
 
-The Secret manifest is intentionally not stored in the repository.
+Current practice manifests:
 
-The PersistentVolume and Ingress resources used during the lab were created as separate exercises and can be added to the repository when they are finalized as reusable manifests.
+```text
+~/tmp/
+├── broken-deployment.yaml
+├── broken-service.yaml
+├── crash-deployment.yaml
+├── probe-demo.yaml
+├── resources-demo.yaml
+├── server-policy.yaml
+├── storage-demo.yaml
+├── webapp-config.yaml
+├── webapp-ingress.yaml
+├── webapp-pvc.yaml
+├── webapp-reader-binding.yaml
+├── webapp-reader-role.yaml
+├── webapp-secret.yaml
+└── webapp.yaml
+```
+
+These files contain practice manifests for troubleshooting, probes, resources, persistent storage, Ingress, RBAC, configuration, networking, and Secrets.
+
+They are intentionally kept outside the repository's finalized Kubernetes manifests. Individual exercises can later be promoted into the project after they are cleaned up, generalized, and made reusable.
+
+---
+
+# Key Learning Outcome
+
+This lab provided practical experience with the Kubernetes workflow:
+
+```text
+Define
+  ↓
+Deploy
+  ↓
+Expose
+  ↓
+Configure
+  ↓
+Observe
+  ↓
+Troubleshoot
+  ↓
+Secure
+  ↓
+Update
+  ↓
+Rollback
+```
+
+The main goal was not simply to deploy an Nginx container, but to understand how Kubernetes manages applications and how an engineer investigates problems when the desired state is not achieved.

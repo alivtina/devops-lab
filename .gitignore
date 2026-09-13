@@ -1,17 +1,50 @@
+# =========================
+# Python
+# =========================
+
+# Virtual environments
 .venv/
+
+# Python bytecode and cache
 __pycache__/
 *.pyc
+
+# Local application logs
 system-health.log
 
+
+# =========================
 # Terraform
+# =========================
+
+# Terraform working directories
 .terraform/
+
+# Terraform state files
 *.tfstate
 *.tfstate.*
+
+# Local Terraform variable files
+# These may contain environment-specific or sensitive values.
 *.tfvars
+
+# Keep the example variable file in Git
 !terraform.tfvars.example
 
+
+# =========================
 # Ansible
+# =========================
+
+# Local Ansible inventory
+# The real inventory may contain environment-specific hosts.
 ansible/inventory.ini
 
+
+# =========================
 # Kubernetes
+# =========================
+
+# Local Kubernetes Secret
+# This file contains test credentials and must not be committed.
 kubernetes/secret.yaml

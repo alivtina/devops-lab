@@ -1,22 +1,492 @@
 # DevOps Lab
 
-A hands-on DevOps learning laboratory built on an Arch Linux host and an Ubuntu Server virtual machine.
+A hands-on DevOps laboratory focused on building practical skills in Linux administration, networking, automation, containers, CI/CD, infrastructure as code, Kubernetes, cloud fundamentals, and monitoring.
 
-The project focuses on practical system administration, networking, automation, containers, CI/CD, cloud fundamentals, infrastructure as code, and Kubernetes.
+The repository contains small experiments, reusable configurations, troubleshooting exercises, and progressively more realistic infrastructure projects.
 
-The goal is to build and document skills that are relevant to junior DevOps, Cloud, and Platform Engineering roles.
+The goal is to move from individual Linux and container tasks toward reproducible, automated infrastructure and deployment workflows.
 
 ---
 
-## Environment
+## Project Summary
 
-* **Host:** Arch Linux
-* **Virtualization:** QEMU/KVM, libvirt, virt-manager
-* **Server:** Ubuntu Server VM
-* **Container runtime:** Docker
-* **Orchestration:** Kubernetes with kind
-* **Package management:** pacman
-* **Shell:** Bash / Zsh
+**DevOps Lab is a practical infrastructure and automation portfolio demonstrating how I build, deploy, automate, monitor, and troubleshoot software environments.**
+
+The repository brings together Linux administration, networking, Git, Bash and Python scripting, Docker, CI/CD, Ansible, Terraform, Kubernetes, Helm, and Prometheus into a single hands-on learning environment.
+
+Rather than focusing only on theoretical exercises, the projects demonstrate practical workflows such as:
+
+* configuring and troubleshooting Linux servers
+* automating server configuration with Ansible
+* building and testing Docker containers
+* creating CI pipelines with GitHub Actions
+* provisioning infrastructure with Terraform
+* deploying applications to Kubernetes
+* packaging Kubernetes applications with Helm
+* monitoring Kubernetes workloads with Prometheus
+* creating alerts for infrastructure problems
+* investigating failures using logs, metrics, processes, networking tools, and Kubernetes diagnostics
+
+The laboratory runs primarily on **Linux with QEMU/KVM, libvirt, Docker, and a local Kubernetes cluster**, allowing infrastructure and deployment scenarios to be tested in a controlled environment.
+
+### What this demonstrates
+
+This portfolio is intended to demonstrate that I can:
+
+**build → automate → deploy → monitor → troubleshoot → improve**
+
+a technical environment rather than only configure individual tools in isolation.
+
+---
+
+## Quick Start
+
+Clone the repository:
+
+```bash
+git clone git@github.com:alivtina/devops-lab.git
+cd devops-lab
+```
+
+### Docker
+
+```bash
+docker build -t app-demo ./docker/app-demo
+docker run --rm -p 8080:8000 app-demo
+```
+
+Test the application:
+
+```bash
+curl http://localhost:8080/health
+```
+
+### Helm
+
+```bash
+helm lint helm/webapp
+helm template webapp helm/webapp
+```
+
+### Python
+
+```bash
+pytest
+```
+
+### Shell scripts
+
+```bash
+shellcheck scripts/*.sh
+```
+
+Some projects require additional infrastructure such as Docker, Kubernetes, Helm, Terraform, Ansible, or a Linux virtual machine.
+
+---
+
+## Projects
+
+| Area                                | Description                                                                                            |
+| ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
+| [Docker](docker/)                   | Container images, Dockerfiles, Compose, health checks, users, networking, volumes, and troubleshooting |
+| [Kubernetes](kubernetes/)           | Deployments, Services, ConfigMaps, Secrets, probes, resources, NetworkPolicy, and troubleshooting      |
+| [Helm](helm/)                       | Packaging and templating Kubernetes applications with Helm                                             |
+| [Monitoring](monitoring/)           | Prometheus-based Kubernetes monitoring, PromQL, metrics, and alerting                                  |
+| [Terraform](terraform/)             | Infrastructure as Code and reproducible infrastructure                                                 |
+| [Ansible](ansible/)                 | Automated Linux server configuration and web server deployment                                         |
+| [Python](python/)                   | Python automation and system health monitoring                                                         |
+| [Scripts](scripts/)                 | Bash utilities for system information and health checks                                                |
+| [Tests](tests/)                     | Automated tests for scripts and Python applications                                                    |
+| [Troubleshooting](troubleshooting/) | Investigation and diagnosis of infrastructure problems                                                 |
+
+A separate Linux Server Lab also contains hands-on Linux administration, SSH, permissions, services, networking, Bash scripting, Git, and CI exercises.
+
+---
+
+## What I Can Do
+
+This repository demonstrates practical experience with:
+
+* administering Linux systems from the command line
+* working with users, groups, permissions, processes, services, and filesystems
+* troubleshooting Linux systems using logs, processes, networking tools, and system resources
+* working with TCP/IP networking, NAT, SSH, and basic network troubleshooting
+* using Git and GitHub for version control and project collaboration
+* writing Bash scripts for system administration and automation
+* writing Python utilities for system monitoring and automation
+* building and troubleshooting Docker images and containers
+* creating Docker Compose environments
+* running containers as non-root users
+* implementing container health checks
+* building CI workflows with GitHub Actions
+* running automated tests and static analysis
+* deploying applications to Linux environments
+* creating Kubernetes Deployments, Services, ConfigMaps, Secrets, and NetworkPolicies
+* configuring Kubernetes probes and resource requests/limits
+* packaging Kubernetes applications with Helm
+* writing PromQL queries and configuring Prometheus alerts
+* automating Linux server configuration with Ansible
+* managing infrastructure with Terraform
+* working with virtualized Linux environments using QEMU/KVM and libvirt
+* understanding the fundamentals of AWS cloud infrastructure
+* investigating infrastructure failures instead of relying only on predefined solutions
+
+---
+
+## Technology Stack
+
+### Operating Systems
+
+* Arch Linux
+* Ubuntu Server
+
+### Virtualization
+
+* QEMU/KVM
+* libvirt
+* virt-manager
+
+### Linux & Networking
+
+* Linux CLI
+* systemd
+* SSH
+* TCP/IP
+* NAT
+* processes and services
+* filesystems
+* permissions
+* resource monitoring
+* troubleshooting
+
+### Version Control & CI/CD
+
+* Git
+* GitHub
+* GitHub Actions
+* ShellCheck
+* pytest
+* CI pipelines
+* artifacts
+* self-hosted Linux runners
+
+### Programming & Automation
+
+* Bash
+* Python
+* C
+
+### Containers
+
+* Docker
+* Dockerfiles
+* Docker Compose
+* container networking
+* volumes
+* environment variables
+* health checks
+* container security basics
+
+### Kubernetes
+
+* Kubernetes
+* kind
+* Deployments
+* Services
+* ConfigMaps
+* Secrets
+* probes
+* resource requests and limits
+* NetworkPolicy
+* rolling updates
+* troubleshooting
+
+### Kubernetes Packaging
+
+* Helm
+* Helm charts
+* templates
+* values
+* releases
+
+### Infrastructure as Code
+
+* Terraform
+* Ansible
+
+### Cloud
+
+* AWS fundamentals
+* cloud infrastructure concepts
+* networking and compute fundamentals
+
+### Monitoring
+
+* Prometheus
+* PromQL
+* Alertmanager
+* Node Exporter
+* kube-state-metrics
+* Kubernetes metrics
+* alerting
+
+---
+
+## Laboratory Environment
+
+The main laboratory runs on an Arch Linux workstation.
+
+```text
+Arch Linux host
+      │
+      ├── QEMU/KVM
+      │      └── Ubuntu Server VM
+      │
+      └── Docker
+             └── kind Kubernetes cluster
+                    ├── Kubernetes workloads
+                    └── Prometheus monitoring
+```
+
+The environment is intentionally local and reproducible so that infrastructure changes, failures, configuration changes, and troubleshooting can be tested safely.
+
+---
+
+## Kubernetes & Monitoring
+
+The Kubernetes laboratory uses a local `kind` cluster.
+
+The monitoring stack is deployed with Helm in the `monitoring` namespace and includes:
+
+* Prometheus
+* Alertmanager
+* Node Exporter
+* kube-state-metrics
+* Pushgateway
+
+The monitoring configuration includes practical Prometheus alerts such as:
+
+* high CPU usage
+* Kubernetes container restarts
+
+The repository contains the Helm values used to configure the monitoring stack.
+
+See [Monitoring](monitoring/) for configuration, PromQL examples, alerts, and troubleshooting.
+
+---
+
+## Infrastructure as Code
+
+Terraform projects demonstrate the basic Infrastructure as Code workflow:
+
+```text
+Write configuration
+       ↓
+terraform init
+       ↓
+terraform plan
+       ↓
+terraform apply
+       ↓
+Inspect infrastructure
+       ↓
+terraform destroy
+```
+
+The projects focus on understanding:
+
+* providers
+* resources
+* variables
+* outputs
+* state
+* plans
+* dependencies
+* reproducible infrastructure
+
+Ansible projects demonstrate configuration management and server automation:
+
+```text
+Control machine
+      ↓
+Inventory
+      ↓
+Playbook
+      ↓
+SSH
+      ↓
+Remote Linux server
+      ↓
+Configured service
+```
+
+---
+
+## CI/CD
+
+GitHub Actions is used to automate validation and deployment-related tasks.
+
+Examples include:
+
+* ShellCheck
+* Python tests
+* artifact handling
+* Docker image builds
+* Docker tests
+* deployment to a self-hosted Linux runner
+
+The purpose is to practice the core CI/CD workflow:
+
+```text
+Code
+ ↓
+Commit
+ ↓
+Push
+ ↓
+CI
+ ├── Static analysis
+ ├── Tests
+ └── Build
+ ↓
+Deployment
+```
+
+---
+
+## Troubleshooting
+
+Troubleshooting is treated as an important part of the laboratory rather than an afterthought.
+
+Exercises focus on investigating problems using evidence such as:
+
+```bash
+systemctl status
+journalctl
+ps
+top
+free
+df
+ss
+ip
+curl
+docker logs
+docker inspect
+kubectl describe
+kubectl logs
+kubectl get events
+```
+
+The objective is to develop a systematic approach:
+
+```text
+Observe
+   ↓
+Collect evidence
+   ↓
+Identify the failing component
+   ↓
+Form a hypothesis
+   ↓
+Test the hypothesis
+   ↓
+Fix the problem
+   ↓
+Verify the result
+   ↓
+Document the solution
+```
+
+---
+
+## Learning Approach
+
+The projects follow a practical learning cycle:
+
+**LEARN → PRACTICE → BUILD → EXPLAIN → REVIEW**
+
+Instead of only following tutorials, each topic is reinforced through hands-on work and troubleshooting.
+
+The repository therefore contains both:
+
+* small exercises used to learn individual concepts
+* larger projects combining multiple DevOps skills
+
+The projects are intentionally developed incrementally as new technologies are learned.
+
+---
+
+## Current Learning Direction
+
+The current progression is:
+
+```text
+Linux
+  ↓
+Networking
+  ↓
+Git & GitHub
+  ↓
+Bash
+  ↓
+Python
+  ↓
+Docker
+  ↓
+CI/CD
+  ↓
+AWS
+  ↓
+Terraform
+  ↓
+Kubernetes
+  ↓
+Monitoring & Logging
+  ↓
+Security
+  ↓
+Real-world DevOps projects
+  ↓
+Portfolio & Job Preparation
+```
+
+The focus is not simply on completing courses or tutorials.
+
+A technology is considered learned when I can use it to solve a practical problem, troubleshoot failures, and explain the underlying concepts.
+
+---
+
+## Portfolio Goal
+
+The long-term goal of this repository is to demonstrate the practical skills required for junior and eventually intermediate/medior DevOps, Cloud, Platform, or Site Reliability Engineering roles.
+
+The portfolio is being built around realistic engineering tasks rather than isolated technology demonstrations.
+
+The target workflow is:
+
+```text
+Linux administration
+        +
+Networking
+        +
+Programming & scripting
+        +
+Containers
+        +
+CI/CD
+        +
+Infrastructure as Code
+        +
+Cloud
+        +
+Kubernetes
+        +
+Monitoring
+        +
+Security
+        ↓
+Reliable automated infrastructure
+```
 
 ---
 
@@ -24,296 +494,40 @@ The goal is to build and document skills that are relevant to junior DevOps, Clo
 
 ```text
 devops-lab/
-├── .github/
-│   └── workflows/
-│       └── ci.yml
-├── ansible/
-│   ├── ansible.cfg
-│   ├── inventory.ini.example
-│   ├── playbook.yml
-│   └── README.md
-├── docker/
-│   ├── app-demo/
-│   ├── compose-demo/
-│   ├── dockerfile-demo/
-│   ├── website/
-│   └── README.md
-├── helm/
-│   └── webapp/
-│       ├── Chart.yaml
-│       ├── values.yaml
-│       └── templates/
-│           ├── deployment.yaml
-│           └── service.yaml
-├── kubernetes/
-│   ├── README.md
-│   ├── deployment.yaml
-│   ├── service.yaml
-│   ├── configmap.yaml
-│   └── network-policy.yaml
-├── python/
-│   └── system-health/
-│       ├── Dockerfile
-│       ├── README.md
-│       ├── requirements.txt
-│       └── system.py
-├── scripts/
-├── terraform/
-│   ├── first-project/
-│   └── web-infrastructure/
-├── troubleshooting/
-├── tests/
-│   └── test_system_health.py
-├── .dockerignore
-├── .gitignore
-└── README.md
+├── ansible/               # Linux configuration management
+├── docker/                # Docker and Compose projects
+├── helm/                  # Helm charts
+├── kubernetes/            # Kubernetes manifests
+├── monitoring/            # Prometheus configuration
+├── python/                # Python automation projects
+├── scripts/               # Bash utilities
+├── terraform/             # Infrastructure as Code
+├── tests/                 # Automated tests
+└── troubleshooting/       # Troubleshooting exercises
 ```
 
 ---
 
-## Skills Practiced
+## Verification
 
-### Linux Administration
+Before committing changes, the main projects can be checked with tools such as:
 
-* Users and groups
-* File ownership and permissions
-* Shared directories and setgid
-* SSH
-* Processes and services
-* Filesystems and disk usage
-* System resources
-* CLI troubleshooting
-* Package management
-
-### Networking
-
-* TCP/IP fundamentals
-* IP addresses and ports
-* localhost
-* NAT
-* Routing
-* SSH
-* HTTP
-* `curl`
-* `ss`
-* `ip`
-* `tcpdump`
-* Network troubleshooting
-
-### Git & GitHub
-
-* Repository management
-* Branches
-* Commits
-* Remote repositories
-* Merge and rebase workflows
-* Interactive rebase
-* Stashing
-* GitHub Actions
-
-### Bash & Python
-
-* Bash scripting
-* ShellCheck
-* Python fundamentals
-* System information and health checks
-* Automated testing with pytest
-
-### Docker
-
-* Images and containers
-* Dockerfiles
-* `.dockerignore`
-* Port mapping
-* Environment variables
-* Docker Compose
-* Container troubleshooting
-* Running applications as non-root users
-
-### CI/CD
-
-GitHub Actions pipelines are used to:
-
-* Run ShellCheck
-* Run Python tests
-* Build artifacts
-* Build and test Docker images
-* Deploy artifacts to a self-hosted Linux runner
-
-### Virtualization
-
-* QEMU/KVM
-* libvirt
-* virt-manager
-* Linux virtual machines
-* Virtual networking
-
-### Terraform
-
-* Terraform configuration
-* Variables and outputs
-* Docker provider
-* Container infrastructure
-* Custom Docker networks
-* Service discovery through container DNS
-* Terraform state management
-* Infrastructure verification
-
-### Ansible
-
-* Inventories
-* Variables
-* Playbooks
-* Modules
-* Handlers
-* Privilege escalation
-* Idempotency
-* Automated server configuration
-* Nginx deployment
-* systemd service management
-
-### AWS Fundamentals
-
-Studied and practiced the architecture and purpose of:
-
-* EC2
-* VPC
-* Subnets
-* Internet Gateway
-* NAT Gateway
-* Security Groups
-* IAM
-* S3
-* EBS
-* RDS
-* Application Load Balancer
-* Auto Scaling
-* Availability Zones
-* CloudWatch
-
-AWS hands-on deployment is planned for a later stage.
-
-### Kubernetes
-
-Hands-on practice with:
-
-* Pods
-* Deployments
-* ReplicaSets
-* Services
-* ConfigMaps
-* Secrets
-* Readiness and liveness probes
-* Resource requests and limits
-* Rolling updates
-* Rollbacks
-* PersistentVolumes and PersistentVolumeClaims
-* Ingress
-* Namespaces
-* ServiceAccounts
-* RBAC
-* NetworkPolicies
-* Kubernetes troubleshooting
-
-The Kubernetes lab runs locally using **kind**.
-
-### Helm
-
-Hands-on practice with:
-
-* Helm charts
-* `Chart.yaml`
-* `values.yaml`
-* Helm templates
-* `helm install`
-* `helm upgrade`
-* `helm history`
-* `helm status`
-* `helm rollback`
-* `helm lint`
-* `helm template`
-* Release revisions
-* Value overrides
-* `--reuse-values`
-
-The `helm/webapp` chart deploys a configurable Nginx application to Kubernetes.
-
----
-
-## Troubleshooting
-
-The repository also contains practical troubleshooting scenarios.
-
-Examples include:
-
-* Linux permission problems
-* Docker permission problems
-* Dockerfile issues
-* GitHub Actions failures
-* Nginx 502 errors
-* Kubernetes `ImagePullBackOff`
-* Kubernetes `CrashLoopBackOff`
-* Broken Service selectors
-* Failed readiness and liveness probes
-* Resource configuration
-* Kubernetes rolling update failures
-* Kubernetes rollback
-* NetworkPolicy connectivity problems
-
-The purpose is not only to configure systems, but to understand how to diagnose failures.
-
----
-
-## Current Architecture
-
-The laboratory connects multiple DevOps technologies into a single learning environment:
-
-```text
-                    Arch Linux Host
-                           │
-                    QEMU / KVM / libvirt
-                           │
-                    Ubuntu Server VM
-                           │
-             ┌─────────────┴─────────────┐
-             │                           │
-          Docker                    Kubernetes
-             │                           │
-       Containers                 kind cluster
-             │                           │
-             └──────────────┬────────────┘
-                            │
-                       Automation
-                     ┌──────┴──────┐
-                     │             │
-                  Ansible       Terraform
-                     │
-                     └──────┬──────┘
-                            │
-                       GitHub Actions
-                            │
-                         CI / CD
+```bash
+shellcheck scripts/*.sh
+pytest
+helm lint helm/webapp
+helm template webapp helm/webapp
+terraform fmt -check
 ```
 
----
-
-## Learning Approach
-
-The laboratory follows:
-
-**LEARN → PRACTICE → BUILD → EXPLAIN → REVIEW**
-
-The focus is on being able to explain and troubleshoot each technology rather than simply completing tutorials.
+Additional validation commands are documented inside the individual project directories.
 
 ---
 
-## Goal
+## Status
 
-The long-term goal of this project is to develop practical skills for:
+This is an actively evolving laboratory.
 
-* Junior DevOps Engineer
-* Cloud Engineer
-* Platform Engineer
-* Site Reliability Engineer
+Some technologies are already demonstrated through hands-on projects, while others are still being expanded toward more realistic production-style scenarios.
 
-and eventually progress toward intermediate/medior DevOps responsibilities.
+The repository will continue to evolve as the laboratory progresses from individual technical exercises toward integrated DevOps projects.

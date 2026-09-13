@@ -1,14 +1,18 @@
 # Terraform Web Infrastructure
 
-## Overview
-
 A hands-on Terraform project that provisions a small multi-container web infrastructure using Docker.
 
-Terraform manages a custom Docker network, Nginx and Redis images, and two containers connected to the same network.
+The project builds on the basic Terraform concepts demonstrated in the [First Terraform Project](../first-project/) and introduces multiple interconnected services, a custom Docker network, container-to-container communication, and infrastructure verification.
+
+## Goal
+
+Use Terraform to define and provision a small interconnected application environment as Infrastructure as Code.
+
+The project demonstrates how multiple Docker resources can be described declaratively and managed through the Terraform lifecycle.
 
 ## Architecture
 
-```text
+```text id="6b6r1f"
                     Terraform
                         │
                         ▼
@@ -16,60 +20,78 @@ Terraform manages a custom Docker network, Nginx and Redis images, and two conta
                         │
                         ▼
                  web-network
-                172.20.0.0/16
+                  172.20.0.0/16
                   │          │
                   ▼          ▼
              web-nginx    web-redis
-             172.20.0.2    172.20.0.3
                   │            │
-            :8087 → :80       :6379
+            host :8087     internal :6379
                   │
                   ▼
              Host machine
 ```
 
-The containers communicate through the Docker internal network.
+The containers communicate through the private Docker network.
 
-Docker's internal DNS allows services to be reached by container name, for example:
+Docker's internal DNS allows services to be reached by container name:
 
-```text
+```text id="u7z7zy"
 web-redis
 ```
 
-rather than relying on a fixed IP address.
+rather than depending on a fixed container IP address.
 
-## What I Practiced
-
-* Terraform providers
-* Terraform resources
-* Terraform variables
-* Terraform outputs
-* Terraform state
-* Resource dependencies
-* Docker images
-* Docker containers
-* Docker bridge networks
-* Port mapping
-* Container-to-container networking
-* Docker internal DNS
-* Infrastructure verification
-* Git and GitHub workflow
+The Nginx service is exposed to the host for testing, while Redis remains accessible only inside the Docker network.
 
 ## Infrastructure
 
-The project creates:
+Terraform creates:
 
-* A custom Docker bridge network: `web-network`
-* Nginx container: `web-nginx`
-* Redis container: `web-redis`
-* Nginx exposed on host port `8087`
+* a custom Docker bridge network: `web-network`
+* an Nginx container: `web-nginx`
+* a Redis container: `web-redis`
+* host port `8087` mapped to Nginx port `80`
 * Redis available internally on port `6379`
 
-Redis is not exposed directly to the host because it only needs to be accessible through the internal Docker network.
+Redis is intentionally not published to the host because it only needs to be accessible by other containers on the internal network.
+
+## What I Practiced
+
+This project demonstrates:
+
+* Terraform providers
+* Terraform resources
+* variables
+* outputs
+* Terraform state
+* resource dependencies
+* Docker images
+* Docker containers
+* Docker bridge networks
+* port mapping
+* container-to-container networking
+* Docker internal DNS
+* infrastructure verification
+* Git and GitHub workflow
+
+## Prerequisites
+
+* Linux
+* Docker
+* Terraform
+
+Verify the required tools:
+
+```bash id="trb9bc"
+terraform version
+docker version
+```
+
+Docker must be running before applying the Terraform configuration.
 
 ## Files
 
-```text
+```text id="w9ddhi"
 web-infrastructure/
 ├── main.tf
 ├── variables.tf
@@ -78,55 +100,71 @@ web-infrastructure/
 └── .terraform.lock.hcl
 ```
 
-Terraform-generated files such as `.terraform/` and Terraform state files are not committed to Git.
+Terraform-generated files such as `.terraform/` and Terraform state files are excluded from Git.
 
-The real `terraform.tfvars` file is also excluded from Git. Use `terraform.tfvars.example` as a template.
+The local `terraform.tfvars` file is also excluded from Git because it contains environment-specific values.
 
-## Requirements
-
-* Linux
-* Docker
-* Terraform
+Use `terraform.tfvars.example` as the starting point for local configuration.
 
 ## Usage
 
-Create your local Terraform variables file:
+### Create local variables
 
-```bash
+Copy the example variables file:
+
+```bash id="1p0s2f"
 cp terraform.tfvars.example terraform.tfvars
 ```
 
-Initialize Terraform:
+Review the values if necessary.
 
-```bash
+### Initialize Terraform
+
+```bash id="0y9a6a"
 terraform init
 ```
 
-Validate the configuration:
+### Validate the configuration
 
-```bash
+```bash id="y9dq7d"
 terraform validate
 ```
 
-Review the planned infrastructure:
+### Review the planned infrastructure
 
-```bash
+```bash id="rj9e8c"
 terraform plan
 ```
 
-Create the infrastructure:
+### Create the infrastructure
 
-```bash
+```bash id="f0r1tx"
 terraform apply
 ```
 
-Display the Terraform outputs:
+Terraform will ask for confirmation before creating the resources.
 
-```bash
+### Inspect Terraform outputs
+
+```bash id="vqmyf6"
 terraform output
 ```
 
-The Nginx service will be available at:
+## Expected Result
+
+After a successful `terraform apply`, the environment contains:
+
+```text id="aqnwh3"
+web-network
+   │
+   ├── web-nginx
+   │      └── host :8087 → container :80
+   │
+   └── web-redis
+          └── internal :6379
+```
+
+The Nginx service is available at:
 
 ```text
 http://localhost:8087
@@ -134,41 +172,53 @@ http://localhost:8087
 
 ## Verification
 
-Check running containers:
+### Check running containers
 
-```bash
+```bash id="1uq2vy"
 docker ps
 ```
 
-Inspect the Docker network:
+### Inspect the Docker network
 
-```bash
+```bash id="mxp39f"
 docker network inspect web-network
 ```
 
-Test Nginx:
+This allows the connected containers and their network configuration to be inspected.
 
-```bash
+### Test Nginx
+
+```bash id="zlf8eo"
 curl http://localhost:8087
 ```
 
-Test Docker DNS and Redis connectivity:
+### Test Docker DNS and Redis connectivity
 
-```bash
-docker run --rm --network web-network redis:alpine redis-cli -h web-redis ping
+Run a temporary Redis client on the same Docker network:
+
+```bash id="6rj4m7"
+docker run --rm \
+  --network web-network \
+  redis:alpine \
+  redis-cli -h web-redis ping
 ```
 
 Expected result:
 
-```text
+```text id="wxy8z3"
 PONG
 ```
 
-This verifies that a container connected to the same Docker network can resolve `web-redis` through Docker DNS and communicate with Redis on port `6379`.
+This verifies that:
+
+1. the temporary container can join `web-network`
+2. Docker DNS resolves `web-redis`
+3. Redis is reachable on the internal network
+4. Redis does not need to be exposed on a host port
 
 ## Terraform Workflow
 
-```text
+```text id="t6gq4y"
 Terraform configuration
           ↓
     terraform init
@@ -184,16 +234,62 @@ Terraform configuration
        verify
 ```
 
-## Cleanup
+The same infrastructure can then be removed with:
 
-To remove the infrastructure created by Terraform:
-
-```bash
+```text id="r4y8ll"
 terraform destroy
 ```
 
-## Purpose
+This demonstrates the Infrastructure as Code lifecycle:
 
-This project was built as a practical Terraform exercise to move from basic Terraform concepts toward realistic infrastructure-as-code practices.
+**define → plan → apply → verify → destroy**
 
-It demonstrates how Terraform can be used to define, provision, and verify multiple interconnected services.
+## Cleanup
+
+Remove all infrastructure created by Terraform:
+
+```bash id="3a9ryq"
+terraform destroy
+```
+
+Verify that the containers and network have been removed:
+
+```bash id="pfh6ft"
+docker ps
+docker network ls
+```
+
+## Learning Outcome
+
+After completing this project, I can independently:
+
+* define Docker infrastructure with Terraform
+* configure and use the Docker provider
+* create multiple related resources
+* use Terraform variables and outputs
+* understand Terraform resource dependencies
+* create custom Docker networks
+* connect multiple containers through a private network
+* use Docker's internal DNS for service discovery
+* expose only the services that need host access
+* verify infrastructure outside Terraform
+* inspect Terraform-managed infrastructure
+* destroy the environment cleanly
+
+## Progression
+
+This project builds on the repository's first Terraform exercise:
+
+```text id="0x4gcf"
+First Terraform project
+        ↓
+Provider + resources + variables + outputs
+        ↓
+Terraform Web Infrastructure
+        ↓
+Multiple resources + networking + service discovery
+        ↓
+More realistic Infrastructure as Code
+```
+
+The project provides a foundation for later Terraform work with cloud infrastructure such as AWS.

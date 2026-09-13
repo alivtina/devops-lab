@@ -1,55 +1,38 @@
 # Python System Health CLI
 
-A small Python command-line utility that reports basic system health information.
+A small Python command-line utility for checking basic Linux system health.
 
-## What it does
+The tool collects system information, evaluates memory and disk usage against configurable thresholds, and reports the results either as human-readable output or machine-readable JSON.
 
-The script collects:
+The project demonstrates how Python can be used for practical system administration, automation, and monitoring tasks.
 
-* Hostname
-* Username
-* Number of CPU cores
-* Memory usage
-* Available memory
-* Disk usage
-* Available disk space
+## What It Does
 
-It compares memory and disk usage against a configurable threshold and reports `OK` or `WARNING`.
+The utility collects:
 
-The CLI supports two output modes:
+* hostname
+* username
+* CPU core count
+* memory usage
+* available memory
+* disk usage
+* available disk space
 
-* Human-readable output
-* JSON output for automation and other tools
+It evaluates memory and disk usage and reports:
 
-## Technologies
-
-* Python
-* psutil
-* Linux
-* JSON
-
-## Run
-
-Create a virtual environment:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
+```text
+OK
+WARNING
 ```
 
-Install dependencies:
+The command supports two output formats:
 
-```bash
-pip install -r requirements.txt
-```
+* **Human-readable output** for interactive use
+* **JSON output** for scripts, automation, monitoring systems, and other tools
 
-### Human-readable output
+## Example Output
 
-```bash
-python system.py
-```
-
-Example:
+### Human-readable
 
 ```text
 System Health
@@ -63,9 +46,9 @@ Disk usage: 39.4% [OK]
 Disk free: 56.30 GB
 ```
 
-### JSON output
+### JSON
 
-Use `--json` to output system information as JSON:
+Run:
 
 ```bash
 python system.py --json
@@ -87,16 +70,128 @@ Example:
 }
 ```
 
-JSON output can be consumed by other scripts, automation tools, monitoring systems, or APIs.
+The JSON output makes the tool easier to integrate with automation scripts or monitoring workflows.
 
-## Skills demonstrated
+---
+
+## Technologies
+
+* Python
+* psutil
+* Linux
+* JSON
+
+## Prerequisites
+
+* Python 3
+* Linux or another supported operating system
+* `pip`
+
+The project uses `psutil` to access system and process information.
+
+## Installation
+
+Create a virtual environment:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate
+```
+
+Install the dependencies:
+
+```bash
+pip install -r requirements.txt
+```
+
+## Usage
+
+Run the health check:
+
+```bash
+python system.py
+```
+
+For machine-readable output:
+
+```bash
+python system.py --json
+```
+
+The command can therefore be used interactively by an administrator or as part of an automated workflow.
+
+---
+
+## Testing
+
+The project includes automated tests using `pytest`.
+
+Run:
+
+```bash
+pytest
+```
+
+The tests verify the behavior of the system health functionality without requiring manual inspection of the output.
+
+---
+
+## DevOps Use Case
+
+A system health utility is a small example of a task commonly automated in DevOps and Linux administration.
+
+For example, the JSON output could be consumed by another script:
+
+```text
+Python health check
+        ↓
+JSON output
+        ↓
+Automation / monitoring
+        ↓
+Action or alert
+```
+
+This project provides a foundation for extending the utility with additional checks such as:
+
+* CPU utilization
+* running services
+* filesystem checks
+* process checks
+* network connectivity
+* configurable warning thresholds
+* integration with monitoring or CI/CD workflows
+
+## Skills Demonstrated
+
+This project demonstrates practical use of:
 
 * Python functions
-* Dictionaries
-* Conditional logic
-* Command-line arguments
+* modules and imports
+* dictionaries
+* conditional logic
+* command-line arguments
 * JSON serialization
-* Modules and imports
-* System information retrieval
-* Basic health checks
-* Formatted output
+* system information retrieval
+* dependency management
+* virtual environments
+* automated testing
+* basic health-check logic
+* formatted terminal output
+* machine-readable output for automation
+
+## Learning Outcome
+
+After completing this project, I can independently:
+
+* create a small Python CLI utility
+* work with external Python packages
+* create and use virtual environments
+* retrieve system information programmatically
+* implement health-check logic
+* process command-line arguments
+* produce human-readable and JSON output
+* write and run automated tests
+* design a small Python tool with automation and DevOps use cases in mind
+
+This project is part of the larger DevOps Lab and provides a foundation for Python-based system administration, automation, monitoring, and infrastructure tooling.

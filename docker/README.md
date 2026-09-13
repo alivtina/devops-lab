@@ -1,8 +1,8 @@
 # Docker Practice
 
-Hands-on Docker lab built as part of the Linux Server Lab.
+A hands-on Docker laboratory demonstrating how to build, run, configure, network, test, and troubleshoot containerized applications using Docker and Docker Compose.
 
-The examples demonstrate how to build, run, configure, network, and troubleshoot containers using Docker and Docker Compose.
+The projects progress from individual Dockerfile concepts to multi-container environments and a small containerized Python application.
 
 ## What This Lab Demonstrates
 
@@ -20,6 +20,8 @@ The examples demonstrate how to build, run, configure, network, and troubleshoot
 * Running containers as a non-root user
 * Docker Compose
 
+---
+
 ## Projects
 
 ### 1. Containerized Python Application
@@ -30,13 +32,13 @@ A small Python HTTP application packaged into a Docker image.
 
 The application demonstrates:
 
-* Building a custom Docker image
-* Copying application code into an image
-* Publishing container ports
-* Environment variables
-* Running as a non-root user
+* building a custom Docker image
+* copying application code into an image
+* publishing container ports
+* environment variables
+* running as a non-root user
 * Docker `HEALTHCHECK`
-* HTTP health endpoint
+* an HTTP health endpoint
 
 #### Build
 
@@ -67,7 +69,7 @@ Expected:
 Hello from Docker! Environment: production
 ```
 
-Healthcheck:
+Health endpoint:
 
 ```bash
 curl http://localhost:8080/health
@@ -97,9 +99,9 @@ Remove the container:
 docker rm -f app-demo
 ```
 
-#### Run with Docker Compose
+### Run with Docker Compose
 
-The application can also be started using Docker Compose.
+The application can also be started using Docker Compose:
 
 ```bash
 docker compose -f docker/app-demo/compose.yaml up -d
@@ -115,11 +117,6 @@ Test the application:
 
 ```bash
 curl http://localhost:8080/
-```
-
-Test the health endpoint:
-
-```bash
 curl http://localhost:8080/health
 ```
 
@@ -131,12 +128,12 @@ docker compose -f docker/app-demo/compose.yaml down
 
 The Compose configuration demonstrates:
 
-* Building an image from a Dockerfile
-* Port publishing
-* Environment variable configuration
-* Container restart policy
+* building an image from a Dockerfile
+* port publishing
+* environment variable configuration
+* a container restart policy
 * Docker healthchecks
-* Managing the application lifecycle with Docker Compose
+* managing the application lifecycle with Docker Compose
 
 ---
 
@@ -157,26 +154,28 @@ Host
   | localhost:8080
   v
 web (nginx)
+
+app (alpine)
   |
   | Docker Compose network
   | http://web
   v
-app (alpine)
-  |
-  v
-named volume
-/data
+web (nginx)
 ```
 
 The example demonstrates:
 
-* Multiple containers managed with Compose
-* Service-to-service communication
+* multiple containers managed with Compose
+* service-to-service communication
 * Docker DNS / service discovery
-* Port publishing
-* Named volumes
-* Environment variables
-* Container lifecycle with Compose
+* port publishing
+* named volumes and volume mounts
+* environment variables
+* container lifecycle with Compose
+
+The `app` container runs `sleep infinity` so it can be used as a shell environment for testing communication with the `web` service.
+
+The named volume is mounted at `/data` to demonstrate persistent storage, although this particular demo does not actively write application data to the volume.
 
 #### Start
 
@@ -227,13 +226,15 @@ Examples include:
 * `COPY`
 * `CMD`
 * `ENTRYPOINT`
-* Image layers
-* Build cache
-* Build context
+* image layers
+* build cache
+* build context
 
 #### Example: package a Bash script into an image
 
 `Dockerfile.copy` packages the existing `system-info.sh` script from the repository into an Ubuntu-based image.
+
+Because the Dockerfile copies a file from `scripts/`, the repository root must be used as the build context.
 
 Build from the repository root:
 
@@ -249,7 +250,14 @@ Run:
 docker run --rm system-info-demo:v1
 ```
 
-The container executes the system information script and displays information such as the hostname, kernel, memory, disk usage, IP address, and CPU count.
+The container executes the system information script and displays information such as:
+
+* hostname
+* kernel
+* memory
+* disk usage
+* IP address
+* CPU count
 
 ---
 
@@ -259,9 +267,28 @@ The container executes the system information script and displays information su
 
 A minimal HTML page used to demonstrate Docker bind mounts.
 
-A bind mount maps a directory or file from the host into a container.
+A bind mount maps a file or directory from the host into a container.
 
-This allows changes made on the host to be immediately visible inside the container without rebuilding the image.
+This allows changes made on the host to become visible inside the container without rebuilding the image.
+
+For example:
+
+```bash
+docker run --rm \
+  -p 8080:80 \
+  -v "$(pwd)/docker/website:/usr/share/nginx/html:ro" \
+  nginx
+```
+
+The `:ro` option mounts the files as read-only inside the container.
+
+Test the website:
+
+```bash
+curl http://localhost:8080
+```
+
+---
 
 ## Key Concepts Practiced
 
@@ -282,20 +309,24 @@ This allows changes made on the host to be immediately visible inside the contai
 | Non-root containers   | `app-demo`                    |
 | Docker Compose        | `app-demo`, `compose-demo`    |
 
+---
+
 ## Learning Outcome
 
 After completing these exercises, I can independently:
 
-* Build a Docker image from a Dockerfile
-* Run and manage containers
-* Publish container ports
-* Pass configuration through environment variables
-* Persist data with Docker volumes
-* Connect containers through Docker networks
-* Use Docker Compose to manage services
-* Debug basic container networking problems
-* Add and verify container healthchecks
-* Run an application container as a non-root user
-* Inspect images, containers, networks, and volumes
-* Test containerized applications from the host and between containers
-* Automate Docker image builds and application tests with GitHub Actions
+* build Docker images from Dockerfiles
+* run and manage containers
+* publish container ports
+* pass configuration through environment variables
+* persist data with Docker volumes
+* connect containers through Docker networks
+* use Docker Compose to manage multiple services
+* debug basic container networking problems
+* add and verify container healthchecks
+* run application containers as non-root users
+* inspect images, containers, networks, and volumes
+* test containerized applications from the host and between containers
+* automate Docker image builds and application tests with GitHub Actions
+
+The project provides the foundation for using containers in later CI/CD, Kubernetes, and deployment projects.

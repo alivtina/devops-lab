@@ -1,0 +1,21 @@
+serverFiles:
+  alerting_rules.yml:
+    groups:
+      - name: kubernetes-alerts
+        rules:
+          - alert: HighCPUUsage
+            expr: 100 * (1 - avg(rate(node_cpu_seconds_total{mode="idle"}[5m])) by (instance)) > 50
+            for: 5m
+            labels:
+              severity: warning
+            annotations:
+              summary: "High CPU usage"
+              description: "CPU usage has been above 50% for more than 5 minutes."
+          - alert: PodRestarting
+            expr: increase(kube_pod_container_status_restarts_total[10m]) > 0
+            for: 2m
+            labels:
+              severity: warning
+            annotations:
+              summary: "Pod has restarted"
+              description: "A Kubernetes container has restarted within the last 10 minutes."
