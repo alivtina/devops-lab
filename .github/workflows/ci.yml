@@ -128,3 +128,30 @@ jobs:
       - name: Run system health container
         run: |
           docker run --rm system-health:ci
+
+  publish-app-demo:
+    needs: docker
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Check repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        run: |
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io \
+            -u "${{ github.actor }}" \
+            --password-stdin
+
+      - name: Build and publish image
+        run: |
+          IMAGE="ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/devops-lab-app-demo"
+          docker build \
+            -t "$IMAGE:${GITHUB_SHA}" \
+            docker/app-demo
+          docker push "$IMAGE:${GITHUB_SHA}"
