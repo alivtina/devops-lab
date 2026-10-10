@@ -1,0 +1,6 @@
+apiVersion: v2
+name: app-demo
+description: Demo Python HTTP application for GitOps deployment
+type: application
+version: 0.1.0
+appVersion: "1.0.0"

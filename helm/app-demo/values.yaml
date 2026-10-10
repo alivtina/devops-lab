@@ -1,0 +1,20 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/alivtina/devops-lab-app-demo
+  tag: "5923f48a682290935afb2f562fdb6062b33b575d"
+  pullPolicy: IfNotPresent
+
+service:
+  type: ClusterIP
+  port: 8000
+
+appEnv: production
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: 250m
+    memory: 128Mi
