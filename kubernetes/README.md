@@ -212,6 +212,98 @@ kubectl exec deploy/webapp -- \
 
 ---
 
+# External Secret Management: Vault + External Secrets Operator
+
+This lab extends Kubernetes Secret management by storing test credentials in HashiCorp Vault and synchronizing selected values into Kubernetes using External Secrets Operator (ESO).
+
+## Architecture
+
+```text
+HashiCorp Vault (KV v2)
+        |
+        | Token with eso-webapp read policy
+        v
+External Secrets Operator
+        |
+        | SecretStore + ExternalSecret
+        v
+Kubernetes Secret: webapp-demo-secret
+        |
+        | Environment variable references
+        v
+Application Pod
+```
+
+## Components
+
+- **Vault** stores the source secret at `secret/webapp-demo`.
+- **Vault policy** grants the ESO token read access to the required KV v2 data path. The token also has Vault's default policy.
+- **SecretStore** defines the Vault connection and authentication reference.
+- **ExternalSecret** maps the Vault properties `username` and `password` to a Kubernetes Secret.
+- **Kubernetes Secret** makes the synchronized values available to workloads in the `webapp` namespace.
+
+## Repository manifests
+
+- `secretstore-vault.yaml` configures the namespaced connection to Vault.
+- `external-secret-webapp.yaml` defines which properties to synchronize and the target Secret name.
+
+The Vault token is stored separately in a Kubernetes Secret named `vault-eso-token`. It must not be committed to Git.
+
+## Verification
+
+Check the SecretStore:
+
+```bash
+kubectl get secretstore vault-backend -n webapp
+```
+
+Check synchronization status:
+
+```bash
+kubectl get externalsecret webapp-demo -n webapp
+```
+
+Check the target Secret's key names without displaying values:
+
+```bash
+kubectl get secret webapp-demo-secret -n webapp \
+  -o go-template='{{range $k, $v := .data}}{{printf "%s\n" $k}}{{end}}'
+```
+
+A successful test showed that both `username` and `password` were present. A temporary Pod also verified that both values could be injected as environment variables without printing them.
+
+## Troubleshooting
+
+Inspect resource status and events:
+
+```bash
+kubectl describe secretstore vault-backend -n webapp
+kubectl describe externalsecret webapp-demo -n webapp
+kubectl get events -n webapp --sort-by=.lastTimestamp
+```
+
+Common causes of synchronization failures include:
+
+- Invalid or expired Vault tokens.
+- Missing Vault policy permissions.
+- Incorrect KV v2 paths or property names.
+- An unavailable Vault service.
+- A SecretStore that has not become ready.
+
+If the Vault development server restarts, its in-memory secrets, policies, and tokens may be lost. The Kubernetes token Secret may remain, but its token can become invalid. Restore the lab's Vault configuration and update the token when necessary.
+
+## Security and production limitations
+
+This is a learning environment, not a production-ready Vault deployment.
+
+- Vault runs in development mode with in-memory storage.
+- The lab uses token-based authentication and HTTP for its internal Vault connection.
+- Kubernetes Secret values are base64-encoded in API representations; base64 is not encryption.
+- Production environments should use persistent Vault storage, TLS, short-lived workload authentication, least-privilege policies, appropriate Kubernetes RBAC, and encryption at rest.
+- Never commit Vault tokens, actual credentials, or unredacted Secret manifests to Git.
+
+---
+
 # Health Probes
 
 Kubernetes health probes were practiced using a separate local exercise:
