@@ -48,7 +48,7 @@ jobs:
 
   deploy:
     needs: shellcheck
-    runs-on: [self-hosted, Linux, X64, ubuntu-devops]
+    runs-on: [self-hosted, Linux, X64]
 
     steps:
       - name: Download artifact
