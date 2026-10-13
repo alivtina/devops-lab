@@ -221,23 +221,25 @@ This lab extends Kubernetes Secret management by storing test credentials in Has
 ```text
 HashiCorp Vault (KV v2)
         |
-        | Token with eso-webapp read policy
+        | Kubernetes authentication
+        | Role: webapp-vault-auth
         v
-External Secrets Operator
+External Secrets Operator (ESO)
         |
-        | SecretStore + ExternalSecret
+        | SecretStore: vault-backend
+        | ExternalSecret: webapp-demo
         v
 Kubernetes Secret: webapp-demo-secret
         |
         | Environment variable references
         v
-Application Pod
+Application Pod: secret-consumer
 ```
 
 ## Components
 
 - **Vault** stores the source secret at `secret/webapp-demo`.
-- **Vault policy** grants the ESO token read access to the required KV v2 data path. The token also has Vault's default policy.
+- **Vault policy:** The `eso-webapp` policy grants read access to `secret/data/webapp-demo`. ESO authenticates to Vault using Kubernetes authentication through the `webapp-vault-auth` role and the `vault-auth` ServiceAccount in the `webapp` namespace.
 - **SecretStore** defines the Vault connection and authentication reference.
 - **ExternalSecret** maps the Vault properties `username` and `password` to a Kubernetes Secret.
 - **Kubernetes Secret** makes the synchronized values available to workloads in the `webapp` namespace.
@@ -247,7 +249,9 @@ Application Pod
 - `secretstore-vault.yaml` configures the namespaced connection to Vault.
 - `external-secret-webapp.yaml` defines which properties to synchronize and the target Secret name.
 
-The Vault token is stored separately in a Kubernetes Secret named `vault-eso-token`. It must not be committed to Git.
+The `SecretStore` uses Vault Kubernetes authentication through the `webapp-vault-auth` role and the `vault-auth` ServiceAccount in the `webapp` namespace. The previous `vault-eso-token` Secret was deleted after the migration was verified. No static Vault token is required by the current configuration.
+
+See the [Vault + ESO Lab documentation](../docs/vault-eso-lab.md) for the authentication setup, secret rotation experiment, troubleshooting, and security considerations.
 
 ## Verification
 
@@ -284,20 +288,20 @@ kubectl get events -n webapp --sort-by=.lastTimestamp
 
 Common causes of synchronization failures include:
 
-- Invalid or expired Vault tokens.
+- Vault Kubernetes authentication failures, including an incorrect role, ServiceAccount, namespace binding, or audience.
 - Missing Vault policy permissions.
 - Incorrect KV v2 paths or property names.
 - An unavailable Vault service.
 - A SecretStore that has not become ready.
 
-If the Vault development server restarts, its in-memory secrets, policies, and tokens may be lost. The Kubernetes token Secret may remain, but its token can become invalid. Restore the lab's Vault configuration and update the token when necessary.
+If the Vault development server restarts, its in-memory secrets, policies, authentication configuration, and roles may be lost. The Kubernetes ServiceAccount and its token-request configuration may remain, but Vault Kubernetes authentication will fail until the Vault configuration is restored. Reconfigure the authentication method, role, policy, and test secret, then verify that the SecretStore and ExternalSecret become ready again.
 
 ## Security and production limitations
 
 This is a learning environment, not a production-ready Vault deployment.
 
 - Vault runs in development mode with in-memory storage.
-- The lab uses token-based authentication and HTTP for its internal Vault connection.
+- The lab uses Kubernetes authentication, but Vault is still accessed over HTTP. Use TLS in production.
 - Kubernetes Secret values are base64-encoded in API representations; base64 is not encryption.
 - Production environments should use persistent Vault storage, TLS, short-lived workload authentication, least-privilege policies, appropriate Kubernetes RBAC, and encryption at rest.
 - Never commit Vault tokens, actual credentials, or unredacted Secret manifests to Git.

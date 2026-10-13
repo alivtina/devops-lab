@@ -90,6 +90,7 @@ Some projects require additional infrastructure such as Docker, Kubernetes, Helm
 | ----------------------------------- | ------------------------------------------------------------------------------------------------------ |
 | [Docker](docker/)                   | Container images, Dockerfiles, Compose, health checks, users, networking, volumes, and troubleshooting |
 | [Kubernetes](kubernetes/)           | Deployments, Services, ConfigMaps, Secrets, probes, resources, NetworkPolicy, and troubleshooting      |
+| [Vault + ESO Lab](docs/vault-eso-lab.md) | Vault Kubernetes authentication, secret synchronization, rotation testing, and security considerations |
 | [Helm](helm/)                       | Packaging and templating Kubernetes applications with Helm                                             |
 | [Monitoring](monitoring/)           | Prometheus-based Kubernetes monitoring, PromQL, metrics, and alerting                                  |
 | [Terraform](terraform/)             | Infrastructure as Code and reproducible infrastructure                                                 |
