@@ -382,7 +382,18 @@ Kubernetes RBAC permissions are additive. A narrower namespace Role does not res
 
 The effective permissions therefore require further review before this configuration can be considered least-privilege.
 
-Reloader is configured with namespace-scoped roles rather than cluster-wide workload access. However, it still has permissions to watch Secrets in the configured application namespace. Those permissions should be reviewed against the actual deployment requirements.
+Reloader is configured with namespace-scoped roles rather than cluster-wide workload access. Its Role in the `webapp` namespace grants access to Secrets and ConfigMaps and permits updates to several workload types.
+
+The following authorization checks were verified for the `reloader-reloader` ServiceAccount in the `reloader` namespace:
+
+| Check | Result |
+|---|---|
+| Patch Deployments in `webapp` | Allowed |
+| Read Secrets in `webapp` | Allowed |
+| Read Secrets in `default` | Denied |
+| List Secrets across all namespaces | Denied |
+
+These checks support the intended namespace-scoped design, but do not constitute a complete RBAC audit. Reloader can read and watch Secrets throughout `webapp`, not only the Secret referenced by the test Deployment. Its additional Job, CronJob, and workload permissions should be reviewed against the deployed chart's requirements before production use.
 
 ### Kubernetes Secrets
 
